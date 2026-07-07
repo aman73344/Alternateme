@@ -1,42 +1,86 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Zap, ArrowRight } from 'lucide-react'
+import Link from "next/link";
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Zap, ArrowRight } from "lucide-react";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
 export default function SignUpPage() {
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  })
-  const [loading, setLoading] = useState(false)
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+  };
 
-  const handleNextStep = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleNextStep = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
     if (step === 1) {
-      setStep(2)
-    } else {
-      setLoading(true)
-      setTimeout(() => {
-        setLoading(false)
-        window.location.href = '/onboarding'
-      }, 1500)
+      setStep(2);
+      return;
     }
-  }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          username: formData.email.split("@")[0].toLowerCase(),
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Registration failed");
+      }
+
+      localStorage.setItem("auth:accessToken", payload.data?.accessToken || "");
+      localStorage.setItem(
+        "auth:refreshToken",
+        payload.data?.refreshToken || "",
+      );
+      window.location.href = "/onboarding";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background via-background to-secondary/20">
@@ -63,8 +107,8 @@ export default function SignUpPage() {
             <CardTitle>Create Your Account</CardTitle>
             <CardDescription>
               {step === 1
-                ? 'Tell us about yourself'
-                : 'Create your account credentials'}
+                ? "Tell us about yourself"
+                : "Create your account credentials"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -74,7 +118,7 @@ export default function SignUpPage() {
                 <div
                   key={s}
                   className={`h-2 flex-1 rounded-full transition-all ${
-                    s <= step ? 'bg-gradient-primary' : 'bg-secondary'
+                    s <= step ? "bg-gradient-primary" : "bg-secondary"
                   }`}
                 />
               ))}
@@ -133,12 +177,15 @@ export default function SignUpPage() {
                       disabled={loading}
                     />
                     <p className="text-xs text-foreground/60">
-                      At least 8 characters with uppercase, lowercase, and numbers
+                      At least 8 characters with uppercase, lowercase, and
+                      numbers
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Confirm Password</label>
+                    <label className="text-sm font-medium">
+                      Confirm Password
+                    </label>
                     <Input
                       type="password"
                       name="confirmPassword"
@@ -153,11 +200,11 @@ export default function SignUpPage() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
                     <input type="checkbox" className="mt-1" required />
                     <label className="text-xs text-foreground/60">
-                      I agree to the{' '}
+                      I agree to the{" "}
                       <Link href="#" className="text-primary hover:underline">
                         Terms of Service
-                      </Link>{' '}
-                      and{' '}
+                      </Link>{" "}
+                      and{" "}
                       <Link href="#" className="text-primary hover:underline">
                         Privacy Policy
                       </Link>
@@ -166,16 +213,20 @@ export default function SignUpPage() {
                 </>
               )}
 
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90 gap-2"
                 disabled={loading}
               >
                 {loading ? (
-                  'Creating account...'
+                  "Creating account..."
                 ) : (
                   <>
-                    {step === 1 ? 'Continue' : 'Create Account'}
+                    {step === 1 ? "Continue" : "Create Account"}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -184,8 +235,11 @@ export default function SignUpPage() {
 
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-center text-sm text-foreground/60">
-                Already have an account?{' '}
-                <Link href="/signin" className="text-primary hover:underline font-medium">
+                Already have an account?{" "}
+                <Link
+                  href="/signin"
+                  className="text-primary hover:underline font-medium"
+                >
                   Sign in
                 </Link>
               </p>
@@ -194,5 +248,5 @@ export default function SignUpPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

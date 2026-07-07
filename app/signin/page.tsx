@@ -1,26 +1,57 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Zap } from 'lucide-react'
+import Link from "next/link";
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Zap } from "lucide-react";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
 export default function SignInPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      // Simulate sign-in
-      window.location.href = '/dashboard'
-    }, 1500)
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Login failed");
+      }
+
+      localStorage.setItem("auth:accessToken", payload.data?.accessToken || "");
+      localStorage.setItem(
+        "auth:refreshToken",
+        payload.data?.refreshToken || "",
+      );
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background via-background to-secondary/20">
@@ -45,7 +76,9 @@ export default function SignInPage() {
         <Card className="border border-border bg-card/50 backdrop-blur">
           <CardHeader className="text-center">
             <CardTitle>Welcome Back</CardTitle>
-            <CardDescription>Sign in to your account to continue</CardDescription>
+            <CardDescription>
+              Sign in to your account to continue
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,7 +97,10 @@ export default function SignInPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Password</label>
-                  <Link href="#" className="text-xs text-primary hover:underline">
+                  <Link
+                    href="#"
+                    className="text-xs text-primary hover:underline"
+                  >
                     Forgot password?
                   </Link>
                 </div>
@@ -78,19 +114,26 @@ export default function SignInPage() {
                 />
               </div>
 
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
                 disabled={loading}
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-center text-sm text-foreground/60">
-                Don&apos;t have an account?{' '}
-                <Link href="/signup" className="text-primary hover:underline font-medium">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/signup"
+                  className="text-primary hover:underline font-medium"
+                >
                   Sign up
                 </Link>
               </p>
@@ -106,5 +149,5 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
