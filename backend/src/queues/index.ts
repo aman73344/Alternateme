@@ -1,4 +1,4 @@
-import { Queue, Worker, QueueScheduler, ConnectionOptions } from 'bullmq';
+import { Queue, ConnectionOptions } from 'bullmq';
 import { config } from '@/config';
 
 const connection: ConnectionOptions = {

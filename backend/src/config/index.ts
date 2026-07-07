@@ -28,11 +28,17 @@ interface Config {
     refreshSecret: string;
     accessExpiry: string;
     refreshExpiry: string;
+    issuer?: string;
+    audience?: string;
   };
   ai: {
     openai: { apiKey: string; model: string; embeddingModel: string };
     anthropic: { apiKey: string; model: string };
     gemini: { apiKey: string; model: string };
+  };
+  oauth: {
+    google: { clientId: string; clientSecret: string; redirectUri: string };
+    github: { clientId: string; clientSecret: string; redirectUri: string };
   };
   voice: {
     elevenlabs: { apiKey: string; model: string };
@@ -107,6 +113,8 @@ const config: Config = {
     refreshSecret: process.env.JWT_REFRESH_SECRET || '',
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
+    issuer: process.env.JWT_ISSUER || 'alterneme-api',
+    audience: process.env.JWT_AUDIENCE || 'alterneme-client',
   },
   ai: {
     openai: {
@@ -163,6 +171,18 @@ const config: Config = {
     stripe: {
       secretKey: process.env.STRIPE_SECRET_KEY || '',
       webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    },
+  },
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      redirectUri: process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/auth/google/callback`,
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+      redirectUri: process.env.GITHUB_REDIRECT_URI || `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/auth/github/callback`,
     },
   },
   logging: {

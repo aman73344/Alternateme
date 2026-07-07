@@ -19,7 +19,7 @@ interface ApiResponse<T = unknown> {
   };
 }
 
-function sendSuccess<T>(res: Response, data: T, statusCode = httpStatus.OK, meta?: ApiResponse['meta']): void {
+function sendSuccess<T>(res: Response, data: T, statusCode: number = httpStatus.OK, meta?: ApiResponse['meta']): void {
   const response: ApiResponse<T> = { success: true, data, meta };
   res.status(statusCode).json(response);
 }

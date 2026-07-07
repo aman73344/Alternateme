@@ -119,39 +119,201 @@ enum CallStatus {
 // ===========================================================================
 
 model User {
-  id             String   @id @default(uuid()) @db.Uuid
-  email          String   @unique
-  emailVerified  DateTime?
-  name           String?
-  avatarUrl      String?
-  role           UserRole @default(USER)
-  passwordHash   String?
-  googleId       String?  @unique
-  githubId       String?  @unique
-  isMfaEnabled   Boolean  @default(false)
-  mfaSecret      String?
-  lastLoginAt    DateTime?
-  metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  deletedAt      DateTime?
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String?  @db.Uuid
+  username           String   @unique
+  email              String   @unique
+  emailVerified      DateTime?
+  name               String?
+  avatarUrl          String?
+  role               UserRole @default(USER)
+  passwordHash       String?
+  isMfaEnabled       Boolean  @default(false)
+  mfaSecret          String?
+  bio                String?
+  timezone           String?  @default("UTC")
+  language           String?  @default("en")
+  theme              String?  @default("light")
+  lastLoginAt        DateTime?
+  isActive           Boolean  @default(true)
+  deletedAt          DateTime?
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  alternates     Alternate[]
-  apiKeys        ApiKey[]
-  subscriptions  Subscription[]
-  conversations  Conversation[]
-  usageRecords   UsageRecord[]
-  voiceProfiles  VoiceProfile[]
-  trainingJobs   TrainingJob[]
-  emailThreads   EmailThread[]
-  callRecords    CallRecord[]
-  analytics      AnalyticEvent[]
-  auditLogs      AuditLog[]
+  tenant             Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  preferences        UserPreference?
+  sessions           Session[]
+  refreshTokens      RefreshToken[]
+  verificationTokens VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  oauthAccounts      OAuthAccount[]
+  alternates         Alternate[]
+  apiKeys            ApiKey[]
+  subscriptions      Subscription[]
+  conversations      Conversation[]
+  usageRecords       UsageRecord[]
+  voiceProfiles      VoiceProfile[]
+  trainingJobs       TrainingJob[]
+  emailThreads       EmailThread[]
+  callRecords        CallRecord[]
+  analytics          AnalyticEvent[]
+  auditLogs          AuditLog[]
+  trainingSources    TrainingSource[]
 
   @@index([email])
+  @@index([username])
   @@index([role])
+  @@index([tenantId])
   @@index([deletedAt])
   @@map("users")
+}
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  domain    String?  @unique
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  sessions Session[]
+  auditLogs AuditLog[]
+
+  @@index([slug])
+  @@map("tenants")
+}
+
+model UserPreference {
+  id                     String   @id @default(uuid()) @db.Uuid
+  userId                 String   @unique @db.Uuid
+  timezone               String   @default("UTC")
+  language               String   @default("en")
+  theme                  String   @default("light")
+  notificationPreferences Json?    @default("{}")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([timezone])
+  @@index([language])
+  @@index([theme])
+  @@map("user_preferences")
+}
+
+enum OAuthProvider {
+  GOOGLE
+  GITHUB
+}
+
+model Session {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  tenantId      String?  @db.Uuid
+  device        String?
+  browser       String?
+  os            String?
+  ipAddress     String?
+  country       String?
+  city          String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+  expiresAt     DateTime
+  isActive      Boolean  @default(true)
+  revokedAt     DateTime?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  sessionId       String   @db.Uuid
+  tokenHash       String   @unique
+  rotatedFromId   String?  @unique @db.Uuid
+  replacedByToken String?
+  revokedAt       DateTime?
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+  ipAddress       String?
+  userAgent       String?
+  fingerprint     String?
+  lastUsedAt      DateTime?
+  isActive        Boolean  @default(true)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  previous RefreshToken? @relation("TokenRotation", fields: [rotatedFromId], references: [id])
+  next     RefreshToken? @relation("TokenRotation")
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @db.Uuid
+  provider          OAuthProvider
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  scope             String?
+  expiresAt         DateTime?
+  tokenType         String?
+  idToken           String?
+  profile           Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([provider])
+  @@map("oauth_accounts")
 }
 
 model Alternate {
@@ -240,7 +402,6 @@ model ContentChunk {
 
   @@index([alternateId])
   @@index([sourceId])
-  @@index([alternateId, embedding], type: IvffloatList)
   @@map("content_chunks")
 }
 
@@ -530,6 +691,7 @@ model AnalyticEvent {
 model AuditLog {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @db.Uuid
+  tenantId    String?  @db.Uuid
   action      String
   entity      String
   entityId    String?
@@ -540,9 +702,11 @@ model AuditLog {
   metadata    Json?
   createdAt   DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([tenantId])
   @@index([action])
   @@index([entity])
   @@index([entityId])

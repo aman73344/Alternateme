@@ -19,13 +19,11 @@ interface StorageAdapter {
 }
 
 class S3StorageAdapter implements StorageAdapter {
-  private client: unknown;
-
   constructor() {
     logger.info('S3 storage adapter initialized');
   }
 
-  async upload(buffer: Buffer, path: string, mimeType: string): Promise<UploadResult> {
+  async upload(buffer: Buffer, path: string, _mimeType: string): Promise<UploadResult> {
     try {
       const key = `${id.generate()}/${path}`;
       logger.debug({ key, size: buffer.length }, 'Uploading to S3');
@@ -62,12 +60,12 @@ class S3StorageAdapter implements StorageAdapter {
 }
 
 class LocalStorageAdapter implements StorageAdapter {
-  async upload(buffer: Buffer, path: string, _mimeType: string): Promise<UploadResult> {
+  async upload(_buffer: Buffer, path: string, _mimeType: string): Promise<UploadResult> {
     const key = `${id.generate()}/${path}`;
     return { url: `/uploads/${key}`, key, bucket: 'local' };
   }
 
-  async download(key: string): Promise<Buffer> {
+  async download(_key: string): Promise<Buffer> {
     return Buffer.from('');
   }
 

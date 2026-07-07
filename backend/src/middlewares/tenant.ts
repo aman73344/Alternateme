@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticationError } from '@/utils/errors';
 
 declare global {
   namespace Express {
     interface Request {
-      tenantId: string;
-      userId: string;
+      tenantId?: string;
+      userId?: string;
     }
   }
 }

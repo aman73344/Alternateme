@@ -3,7 +3,7 @@ import httpStatus from 'http-status';
 import { apiResponse } from '@/utils/response';
 import { config } from '@/config';
 
-const router = Router();
+const router: import('express').Router = Router();
 
 router.get('/health', (_req: Request, res: Response) => {
   apiResponse.success(res, {

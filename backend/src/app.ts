@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import { config } from '@/config';
 import { apiRouter } from '@/routes';
@@ -15,9 +16,8 @@ import {
   notFoundHandler,
 } from '@/middlewares';
 import { swaggerSpec } from '@/config/swagger';
-import { logger } from '@/utils/logger';
 
-const app = express();
+const app: import('express').Application = express();
 
 app.set('trust proxy', 1);
 app.set('etag', 'strong');
@@ -44,6 +44,7 @@ app.use(requestIdMiddleware);
 app.use(requestLogger);
 app.use(globalRateLimiter);
 app.use(tenantResolver);
+app.use(cookieParser());
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
