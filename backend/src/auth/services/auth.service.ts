@@ -1,4 +1,5 @@
-import { addHours, addDays } from 'date-fns';
+import { date } from '@/utils/helpers';
+const { addHours, addDays } = date;
 import { config } from '@/config';
 import { AuthenticationError, AuthorizationError, ConflictError, NotFoundError } from '@/utils/errors';
 import { hashPassword, verifyPassword } from '@/auth/utils/password';
@@ -38,7 +39,7 @@ export async function registerUser(data: {
   email: string;
   password: string;
   tenantId?: string;
-}): Promise<{ userId: string; email: string }> {
+}): Promise<AuthTokens> {
   const existingByEmail = await userRepo.findUserByEmail(data.email);
   if (existingByEmail) {
     throw new ConflictError('Email already in use');
@@ -80,7 +81,40 @@ export async function registerUser(data: {
     metadata: { email: user.email, username: user.username },
   });
 
-  return { userId: user.id, email: user.email };
+  // Auto-login: create session and return tokens
+  const sessionRecord = await sessionRepo.createSession({
+    userId: user.id,
+    tenantId: user.tenantId ?? undefined,
+    device: data.tenantId,
+    ipAddress: '127.0.0.1',
+    userAgent: 'Registration',
+    expiresAt: addDays(new Date(), 30),
+  });
+
+  const accessToken = signAccessToken({
+    jti: createRandomToken(16),
+    sub: user.id,
+    sid: sessionRecord.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    tenantId: user.tenantId ?? null,
+  });
+
+  const refreshTokenValue = createRandomToken(64);
+  const refreshTokenHash = hashToken(refreshTokenValue);
+  await tokenRepo.createRefreshToken({
+    userId: user.id,
+    sessionId: sessionRecord.id,
+    tokenHash: refreshTokenHash,
+    expiresAt: addDays(new Date(), 30),
+  });
+
+  return {
+    accessToken,
+    refreshToken: refreshTokenValue,
+    expiresIn: config.jwt.accessExpiry,
+  };
 }
 
 export async function verifyEmail(token: string): Promise<void> {
@@ -180,6 +214,7 @@ export async function loginWithPassword(data: { email: string; password: string;
   const accessToken = signAccessToken({
     jti: createRandomToken(16),
     sub: user.id,
+    sid: session.id,
     email: user.email,
     username: user.username,
     role: user.role,
@@ -450,6 +485,7 @@ async function createSessionForUser(userId: string, session: SessionInfo): Promi
   const accessToken = signAccessToken({
     jti: createRandomToken(16),
     sub: user.id,
+    sid: sessionRecord.id,
     email: user.email,
     username: user.username,
     role: user.role,
