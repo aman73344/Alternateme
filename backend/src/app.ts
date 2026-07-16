@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Router } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -14,7 +14,6 @@ import {
   errorHandler,
   notFoundHandler,
 } from '@/middlewares';
-import { swaggerSpec } from '@/config/swagger';
 
 const app: import('express').Application = express();
 
@@ -45,10 +44,32 @@ app.use(globalRateLimiter);
 app.use(tenantResolver);
 app.use(cookieParser());
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Alternate Me API',
-}));
+// Lazy-load swagger docs to avoid swagger-jsdoc blocking at startup
+// swagger-jsdoc reads files from disk at initialization which can hang
+const swaggerRouter = Router();
+app.use('/docs', swaggerRouter);
+
+// Defer swagger initialization to first request
+let swaggerInitialized = false;
+swaggerRouter.use((_req, res, next) => {
+  if (!swaggerInitialized) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { swaggerSpec } = require('@/config/swagger');
+      swaggerRouter.use(swaggerUi.serve);
+      swaggerRouter.use(swaggerUi.setup(swaggerSpec, {
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'Alternate Me API',
+      }));
+      swaggerInitialized = true;
+      next();
+    } catch {
+      res.status(500).json({ success: false, error: { code: 'SWAGGER_ERROR', message: 'Failed to load API docs' } });
+    }
+  } else {
+    next();
+  }
+});
 
 app.use(config.app.apiPrefix, apiRouter);
 

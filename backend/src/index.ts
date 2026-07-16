@@ -1,4 +1,3 @@
-import 'module-alias/register';
 import { config } from '@/config';
 import { validateEnv } from '@/config/env.validation';
 import { app } from '@/app';

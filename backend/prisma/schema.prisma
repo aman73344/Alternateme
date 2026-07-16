@@ -1,12 +1,13 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions", "fullTextSearch"]
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [pgvector, citext, uuid_ossp]
+  // pgvector, citext, and uuid-ossp extensions are expected but not required here
+  // They will be installed manually if needed
 }
 
 // ===========================================================================
@@ -394,7 +395,8 @@ model ContentChunk {
   content         String         @db.Text
   metadata        Json?
   tokenCount      Int?
-  embedding       Unsupported("vector(1536)")?
+  // Embeddings stored externally (e.g., Pinecone, or pgvector extension installed manually)
+  embeddingId     String?
   createdAt       DateTime       @default(now())
 
   alternate Alternate      @relation(fields: [alternateId], references: [id], onDelete: Cascade)
