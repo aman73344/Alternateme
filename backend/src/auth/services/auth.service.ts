@@ -40,24 +40,39 @@ export async function registerUser(data: {
   password: string;
   tenantId?: string;
 }): Promise<AuthTokens> {
-  const existingByEmail = await userRepo.findUserByEmail(data.email);
-  if (existingByEmail) {
+  const normalizedEmail = data.email.toLowerCase().trim();
+  const normalizedUsername = data.username.toLowerCase().trim();
+
+  const existingByEmail = await userRepo.findUserByEmail(normalizedEmail);
+  if (existingByEmail && existingByEmail.emailVerified) {
     throw new ConflictError('Email already in use');
   }
 
-  const existingByUsername = await userRepo.findUserByUsername(data.username);
-  if (existingByUsername) {
+  const existingByUsername = await userRepo.findUserByUsername(normalizedUsername);
+  if (existingByUsername && (!existingByEmail || existingByUsername.id !== existingByEmail.id)) {
     throw new ConflictError('Username already in use');
   }
 
   const passwordHash = await hashPassword(data.password);
-  const user = await userRepo.createUser({
-    email: data.email.toLowerCase(),
-    username: data.username.toLowerCase(),
-    name: data.name,
-    passwordHash,
-    tenantId: data.tenantId,
-  });
+
+  const user = existingByEmail
+    ? await userRepo.updateUser(existingByEmail.id, {
+        email: normalizedEmail,
+        username: normalizedUsername,
+        name: data.name,
+        passwordHash,
+        emailVerified: null,
+        isActive: true,
+      })
+    : await userRepo.createUser({
+        email: normalizedEmail,
+        username: normalizedUsername,
+        name: data.name,
+        passwordHash,
+        tenantId: data.tenantId,
+      });
+
+  await prisma.verificationToken.deleteMany({ where: { userId: user.id } });
 
   const token = createRandomToken(48);
   const tokenHash = hashToken(token);
@@ -75,13 +90,12 @@ export async function registerUser(data: {
 
   await auditRepo.createAuditLog({
     userId: user.id,
-    action: 'USER_REGISTERED',
+    action: existingByEmail ? 'USER_REGISTERED' : 'USER_REGISTERED',
     entity: 'User',
     entityId: user.id,
     metadata: { email: user.email, username: user.username },
   });
 
-  // Auto-login: create session and return tokens
   const sessionRecord = await sessionRepo.createSession({
     userId: user.id,
     tenantId: user.tenantId ?? undefined,

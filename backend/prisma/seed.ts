@@ -1,3 +1,4 @@
+import argon2 from 'argon2';
 import { PrismaClient } from '@prisma/client';
 import { id } from '../src/utils/helpers';
 
@@ -12,18 +13,51 @@ async function main() {
     create: {
       id: id.generate(),
       email: 'admin@alterneme.com',
+      username: 'admin',
       name: 'Admin User',
       role: 'SUPER_ADMIN',
     },
   });
 
-  await prisma.subscription.upsert({
+  const existingAdminSubscription = await prisma.subscription.findFirst({
     where: { userId: admin.id },
-    update: {},
+  });
+
+  if (!existingAdminSubscription) {
+    await prisma.subscription.create({
+      data: {
+        userId: admin.id,
+        tier: 'ENTERPRISE',
+        status: 'ACTIVE',
+      },
+    });
+  }
+
+  const demoPasswordHash = await argon2.hash('demo123', {
+    type: argon2.argon2id,
+    memoryCost: 2 ** 16,
+    timeCost: 3,
+    parallelism: 1,
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'demo@alternate.me' },
+    update: {
+      username: 'demo',
+      name: 'Demo User',
+      passwordHash: demoPasswordHash,
+      emailVerified: new Date(),
+      isActive: true,
+    },
     create: {
-      userId: admin.id,
-      tier: 'ENTERPRISE',
-      status: 'ACTIVE',
+      id: id.generate(),
+      email: 'demo@alternate.me',
+      username: 'demo',
+      name: 'Demo User',
+      passwordHash: demoPasswordHash,
+      emailVerified: new Date(),
+      role: 'USER',
+      isActive: true,
     },
   });
 

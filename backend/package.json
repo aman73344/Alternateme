@@ -55,6 +55,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@esbuild/win32-x64": "0.28.1",
     "@types/compression": "^1.7.5",
     "@types/cookie-parser": "^1.4.3",
     "@types/cors": "^2.8.17",
