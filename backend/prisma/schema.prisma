@@ -21,27 +21,48 @@ enum UserRole {
 }
 
 enum AlternateStatus {
-  ACTIVE
-  INACTIVE
   DRAFT
+  PUBLISHED
+  PAUSED
   ARCHIVED
 }
 
+enum AlternateVisibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum OnboardingStep {
+  PERSONAL
+  SOURCES
+  PERSONA
+  VOICE
+  AI_PROVIDER
+  PUBLISH
+}
+
 enum SourceType {
-  DOCUMENT
+  FILE
   URL
   LINKEDIN
   YOUTUBE
-  RESUME
-  MANUAL
-  WHATSAPP
+  OTHER
 }
 
 enum SourceStatus {
   PENDING
   PROCESSING
-  COMPLETED
+  READY
   FAILED
+  DELETED
 }
 
 enum MessageRole {
@@ -89,6 +110,24 @@ enum TrainingStatus {
 enum VoiceProvider {
   ELEVENLABS
   CARTESIA
+  CUSTOM
+}
+
+enum VoiceType {
+  PROVIDER_VOICE
+  CLONED_VOICE
+}
+
+enum VoiceStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum AIProvider {
+  OPENAI
+  ANTHROPIC
 }
 
 enum EmailDirection {
@@ -113,6 +152,22 @@ enum CallStatus {
   FAILED
   NO_ANSWER
   BUSY
+}
+
+enum AuditAction {
+  ALTERNATE_CREATED
+  ALTERNATE_UPDATED
+  ALTERNATE_DELETED
+  ONBOARDING_STARTED
+  ONBOARDING_COMPLETED
+  SOURCE_ADDED
+  SOURCE_DELETED
+  PERSONA_UPDATED
+  VOICE_SELECTED
+  VOICE_CONSENT_GIVEN
+  AI_PROVIDER_ADDED
+  AI_PROVIDER_REMOVED
+  ALTERNATE_PUBLISHED
 }
 
 // ===========================================================================
@@ -161,6 +216,9 @@ model User {
   analytics          AnalyticEvent[]
   auditLogs          AuditLog[]
   trainingSources    TrainingSource[]
+  onboardings        Onboarding[]
+  personas           Persona[]
+  aiProviderConfigs  AIProviderConfig[]
 
   @@index([email])
   @@index([username])
@@ -317,40 +375,95 @@ model OAuthAccount {
   @@map("oauth_accounts")
 }
 
+// ===========================================================================
+// ALTERNATES
+// ===========================================================================
+
 model Alternate {
-  id          String          @id @default(uuid()) @db.Uuid
-  userId      String          @db.Uuid
-  name        String
-  slug        String          @unique
-  description String?
-  status      AlternateStatus @default(DRAFT)
-  avatarUrl   String?
-  persona     Json?
-  voiceId     String?
-  config      Json?
-  publicUrl   String?         @unique
-  isPublic    Boolean         @default(false)
-  totalConversations Int     @default(0)
-  totalMessages      Int     @default(0)
-  lastActiveAt DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  deletedAt   DateTime?
+  id               String              @id @default(uuid()) @db.Uuid
+  userId           String              @db.Uuid
+  username         String              @unique
+  displayName      String
+  title            String?
+  bio              String?
+  avatarUrl        String?
+  visibility       AlternateVisibility @default(PRIVATE)
+  status           AlternateStatus     @default(DRAFT)
+  personaPrompt    String?
+  modelId          String?
+  publishedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  onboarding    Onboarding?
+  persona       Persona?
   sources       TrainingSource[]
-  chunks        ContentChunk[]
+  voiceProfile  VoiceProfile?
+  aiProvider    AIProviderConfig?
   conversations Conversation[]
-  voiceProfiles VoiceProfile[]
   trainingJobs  TrainingJob[]
   emailThreads  EmailThread[]
   callRecords   CallRecord[]
+  chunks        ContentChunk[]
 
   @@index([userId])
-  @@index([slug])
+  @@index([username])
   @@index([status])
+  @@index([visibility])
   @@index([deletedAt])
   @@map("alternates")
+}
+
+// ===========================================================================
+// ONBOARDING
+// ===========================================================================
+
+model Onboarding {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @db.Uuid
+  alternateId    String           @unique @db.Uuid
+  currentStep    OnboardingStep
+  completedSteps OnboardingStep[]
+  status         OnboardingStatus @default(NOT_STARTED)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([status])
+  @@map("onboardings")
+}
+
+// ===========================================================================
+// PERSONA
+// ===========================================================================
+
+model Persona {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
+  alternateId     String    @unique @db.Uuid
+  tone            String?
+  writingStyle    String?
+  personality     String?
+  instructions    String?   @db.Text
+  boundaries      String?   @db.Text
+  refusalBehavior String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@map("personas")
 }
 
 // ===========================================================================
@@ -362,17 +475,16 @@ model TrainingSource {
   alternateId  String       @db.Uuid
   userId       String       @db.Uuid
   type         SourceType
-  status       SourceStatus @default(PENDING)
-  title        String?
-  description  String?
+  origin       String?
+  name         String
   url          String?
-  fileUrl      String?
-  fileType     String?
+  fileName     String?
+  mimeType     String?
   fileSize     Int?
-  rawContent   String?      @db.Text
-  metadata     Json?
+  status       SourceStatus @default(PENDING)
+  wordCount    Int?
   errorMessage String?
-  processedAt  DateTime?
+  lastSyncedAt DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -432,6 +544,60 @@ model TrainingJob {
 }
 
 // ===========================================================================
+// VOICE
+// ===========================================================================
+
+model VoiceProfile {
+  id              String       @id @default(uuid()) @db.Uuid
+  userId          String       @db.Uuid
+  alternateId     String       @db.Uuid
+  provider        VoiceProvider
+  voiceId         String
+  name            String
+  type            VoiceType
+  consentGiven    Boolean      @default(false)
+  consentTimestamp DateTime?
+  status          VoiceStatus  @default(PENDING)
+  settings        Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@unique([alternateId])
+  @@map("voice_profiles")
+}
+
+// ===========================================================================
+// AI PROVIDER CONFIG
+// ===========================================================================
+
+model AIProviderConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  alternateId     String   @unique @db.Uuid
+  provider        AIProvider
+  encryptedApiKey String   @db.Text
+  keyLabel        String?
+  status          String   @default("PENDING")
+  defaultModel    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastValidatedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([provider])
+  @@map("ai_provider_configs")
+}
+
+// ===========================================================================
 // CONVERSATIONS
 // ===========================================================================
 
@@ -480,107 +646,6 @@ model Message {
   @@index([conversationId])
   @@index([createdAt])
   @@map("messages")
-}
-
-// ===========================================================================
-// VOICE
-// ===========================================================================
-
-model VoiceProfile {
-  id           String        @id @default(uuid()) @db.Uuid
-  userId       String        @db.Uuid
-  alternateId  String?       @db.Uuid
-  provider     VoiceProvider @default(ELEVENLABS)
-  providerVoiceId String?
-  name         String
-  description  String?
-  sampleUrl    String?
-  settings     Json?
-  isCloned     Boolean       @default(false)
-  isDefault    Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alternate Alternate? @relation(fields: [alternateId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([alternateId])
-  @@map("voice_profiles")
-}
-
-// ===========================================================================
-// API KEYS
-// ===========================================================================
-
-model ApiKey {
-  id        String     @id @default(uuid()) @db.Uuid
-  userId    String     @db.Uuid
-  name      String
-  keyPrefix String
-  keyHash   String     @unique
-  type      ApiKeyType @default(PRIVATE)
-  scopes    Json?
-  lastUsedAt DateTime?
-  expiresAt DateTime?
-  isRevoked Boolean    @default(false)
-  revokedAt DateTime?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([keyHash])
-  @@index([isRevoked])
-  @@map("api_keys")
-}
-
-// ===========================================================================
-// BILLING
-// ===========================================================================
-
-model Subscription {
-  id                String             @id @default(uuid()) @db.Uuid
-  userId            String             @db.Uuid
-  stripeCustomerId  String?            @unique
-  stripeSubscriptionId String?         @unique
-  tier              SubscriptionTier   @default(FREE)
-  status            SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  trialEndsAt       DateTime?
-  canceledAt        DateTime?
-  metadata          Json?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-
-  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  records UsageRecord[]
-
-  @@index([userId])
-  @@index([status])
-  @@index([tier])
-  @@map("subscriptions")
-}
-
-model UsageRecord {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @db.Uuid
-  subscriptionId String?  @db.Uuid
-  feature        String
-  quantity       Int      @default(1)
-  unit           String   @default("count")
-  metadata       Json?
-  recordedAt     DateTime @default(now())
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([feature])
-  @@index([recordedAt])
-  @@map("usage_records")
 }
 
 // ===========================================================================
@@ -714,4 +779,78 @@ model AuditLog {
   @@index([entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ===========================================================================
+// API KEYS
+// ===========================================================================
+
+model ApiKey {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid
+  name      String
+  keyPrefix String
+  keyHash   String     @unique
+  type      ApiKeyType @default(PRIVATE)
+  scopes    Json?
+  lastUsedAt DateTime?
+  expiresAt DateTime?
+  isRevoked Boolean    @default(false)
+  revokedAt DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([isRevoked])
+  @@map("api_keys")
+}
+
+// ===========================================================================
+// BILLING
+// ===========================================================================
+
+model Subscription {
+  id                String             @id @default(uuid()) @db.Uuid
+  userId            String             @db.Uuid
+  stripeCustomerId  String?            @unique
+  stripeSubscriptionId String?         @unique
+  tier              SubscriptionTier   @default(FREE)
+  status            SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialEndsAt       DateTime?
+  canceledAt        DateTime?
+  metadata          Json?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records UsageRecord[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([tier])
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  subscriptionId String?  @db.Uuid
+  feature        String
+  quantity       Int      @default(1)
+  unit           String   @default("count")
+  metadata       Json?
+  recordedAt     DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([feature])
+  @@index([recordedAt])
+  @@map("usage_records")
 }
