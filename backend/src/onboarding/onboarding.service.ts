@@ -296,7 +296,12 @@ export const onboardingService = {
       throw new NotFoundError('Alternate not found');
     }
 
-    // Encrypt the API key with AES-256-GCM — never base64, never plaintext
+    // Encrypt the API key with AES-256-GCM — never base64, never plaintext.
+    // We DO NOT claim the key is valid here: during onboarding the key is stored
+    // as PENDING and is only validated later (Phase 5 / live BYOK management).
+    // This avoids false "VALID" status and any external network dependency in the
+    // onboarding flow. If a key was previously marked INVALID, re-saving it here
+    // resets it to PENDING so a corrected key can pass publish.
     const encryptedApiKey = encryption.encrypt(data.apiKey);
 
     await prisma.aIProviderConfig.upsert({
@@ -308,14 +313,16 @@ export const onboardingService = {
         encryptedApiKey,
         keyLabel: data.keyLabel,
         defaultModel: data.defaultModel,
-        status: 'VALID',
+        status: 'PENDING',
+        lastValidatedAt: null,
       },
       update: {
         provider: data.provider as any,
         encryptedApiKey,
         keyLabel: data.keyLabel,
         defaultModel: data.defaultModel,
-        status: 'VALID',
+        status: 'PENDING',
+        lastValidatedAt: null,
       },
     });
 
@@ -342,7 +349,7 @@ export const onboardingService = {
     });
 
     // Never return the encrypted key
-    return { provider: data.provider, status: 'VALID' };
+    return { provider: data.provider, status: 'PENDING' };
   },
 
   async completeStep(userId: string, alternateId: string, step: string): Promise<{ currentStep: string; completedSteps: string[] }> {

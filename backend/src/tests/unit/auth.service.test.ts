@@ -1,19 +1,47 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerUser } from '@/auth/services/auth.service';
 
-const findUserByEmail = vi.fn();
-const findUserByUsername = vi.fn();
-const createUser = vi.fn();
-const updateUser = vi.fn();
-const createVerificationToken = vi.fn();
-const createRefreshToken = vi.fn();
-const createSession = vi.fn();
-const createAuditLog = vi.fn();
-const sendEmail = vi.fn();
-const hashPassword = vi.fn();
-const createRandomToken = vi.fn();
-const hashToken = vi.fn();
-const signAccessToken = vi.fn();
+// vi.mock factories are hoisted above imports — any variables they reference
+// must be created with vi.hoisted() so they exist before the hoist runs.
+const {
+  findUserByEmail,
+  findUserByUsername,
+  createUser,
+  updateUser,
+  createVerificationToken,
+  createRefreshToken,
+  createSession,
+  createAuditLog,
+  sendEmail,
+  hashPassword,
+  createRandomToken,
+  hashToken,
+  signAccessToken,
+  deleteVerificationTokens,
+} = vi.hoisted(() => ({
+  findUserByEmail: vi.fn(),
+  findUserByUsername: vi.fn(),
+  createUser: vi.fn(),
+  updateUser: vi.fn(),
+  createVerificationToken: vi.fn(),
+  createRefreshToken: vi.fn(),
+  createSession: vi.fn(),
+  createAuditLog: vi.fn(),
+  sendEmail: vi.fn(),
+  hashPassword: vi.fn(),
+  createRandomToken: vi.fn(),
+  hashToken: vi.fn(),
+  signAccessToken: vi.fn(),
+  deleteVerificationTokens: vi.fn(),
+}));
+
+// registerUser talks to prisma directly (not via repositories) — mock the
+// database module so unit tests never touch PostgreSQL.
+vi.mock('@/database', () => ({
+  prisma: {
+    verificationToken: { deleteMany: deleteVerificationTokens },
+  },
+}));
 
 vi.mock('@/auth/repositories/user.repository', () => ({
   findUserByEmail,
@@ -71,6 +99,7 @@ describe('registerUser', () => {
     createRefreshToken.mockResolvedValue({ id: 'refresh-1' });
     createAuditLog.mockResolvedValue(undefined);
     sendEmail.mockResolvedValue(undefined);
+    deleteVerificationTokens.mockResolvedValue({ count: 0 });
     createUser.mockResolvedValue({
       id: 'user-1',
       email: 'aman723344@gmail.com',

@@ -58,6 +58,7 @@ interface Config {
     bucket: string;
     endpoint: string;
     publicUrl: string;
+    localDir: string;
   };
   billing: {
     stripe: { secretKey: string; webhookSecret: string };
@@ -85,6 +86,35 @@ interface Config {
   };
   encryption: {
     key: string;
+  };
+  knowledge: {
+    embedding: {
+      provider: string;
+      model: string;
+      dimensions: number;
+      batchSize: number;
+      timeoutMs: number;
+    };
+    chunking: {
+      chunkSize: number;
+      overlap: number;
+      maxChunkSize: number;
+      minChunkSize: number;
+    };
+    url: {
+      timeoutMs: number;
+      maxRedirects: number;
+      maxResponseSize: number;
+      userAgent: string;
+    };
+    file: {
+      maxFileSize: number;
+      maxDocumentSize: number;
+      allowedMimeTypes: string[];
+    };
+    retry: {
+      maxAttempts: number;
+    };
   };
 }
 
@@ -166,6 +196,7 @@ const config: Config = {
     bucket: process.env.STORAGE_BUCKET || 'alterneme-uploads',
     endpoint: process.env.STORAGE_ENDPOINT || '',
     publicUrl: process.env.STORAGE_PUBLIC_URL || '',
+    localDir: process.env.LOCAL_STORAGE_DIR || 'uploads',
   },
   billing: {
     stripe: {
@@ -208,6 +239,38 @@ const config: Config = {
   },
   encryption: {
     key: process.env.ENCRYPTION_KEY || '',
+  },
+  knowledge: {
+    embedding: {
+      provider: process.env.EMBEDDING_PROVIDER || 'openai',
+      model: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
+      dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10),
+      batchSize: parseInt(process.env.EMBEDDING_BATCH_SIZE || '64', 10),
+      timeoutMs: parseInt(process.env.EMBEDDING_TIMEOUT_MS || '30000', 10),
+    },
+    chunking: {
+      chunkSize: parseInt(process.env.CHUNK_SIZE || '1000', 10),
+      overlap: parseInt(process.env.CHUNK_OVERLAP || '150', 10),
+      maxChunkSize: parseInt(process.env.MAX_CHUNK_SIZE || '2048', 10),
+      minChunkSize: parseInt(process.env.MIN_CHUNK_SIZE || '64', 10),
+    },
+    url: {
+      timeoutMs: parseInt(process.env.INGESTION_TIMEOUT || '15000', 10),
+      maxRedirects: parseInt(process.env.MAX_URL_REDIRECTS || '5', 10),
+      maxResponseSize: parseInt(process.env.MAX_URL_RESPONSE_SIZE || String(5 * 1024 * 1024), 10),
+      userAgent: process.env.INGESTION_USER_AGENT || 'AlternateMeBot/1.0 (+https://alterneme.com)',
+    },
+    file: {
+      maxFileSize:
+        parseInt(process.env.MAX_FILE_SIZE || String(25 * 1024 * 1024), 10),
+      maxDocumentSize:
+        parseInt(process.env.MAX_DOCUMENT_SIZE || String(15 * 1024 * 1024), 10),
+      allowedMimeTypes: (process.env.ALLOWED_FILE_TYPES || 'application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        .split(','),
+    },
+    retry: {
+      maxAttempts: parseInt(process.env.INGESTION_MAX_RETRIES || '3', 10),
+    },
   },
 };
 

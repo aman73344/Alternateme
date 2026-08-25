@@ -39,19 +39,19 @@ describe('auth middleware', () => {
   });
 
   it('authorizes ownership when the requester owns the resource', () => {
-    const req = { authUser: { id: 'user-1' } } as any;
+    const req = { authUser: { id: 'user-1' }, params: { ownerId: 'user-1' } } as any;
     const next = vi.fn();
 
-    authorizeOwnership((request: any) => request.authUser.id)(req, {} as any, next);
+    authorizeOwnership((request: any) => request.params.ownerId)(req, {} as any, next);
 
     expect(next).toHaveBeenCalledWith();
   });
 
   it('rejects ownership when the requester does not own the resource', () => {
-    const req = { authUser: { id: 'user-2' } } as any;
+    const req = { authUser: { id: 'user-2' }, params: { ownerId: 'user-1' } } as any;
     const next = vi.fn();
 
-    authorizeOwnership((request: any) => request.authUser.id)(req, {} as any, next);
+    authorizeOwnership((request: any) => request.params.ownerId)(req, {} as any, next);
 
     expect(next).toHaveBeenCalledWith(expect.any(Error));
   });

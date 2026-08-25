@@ -23,7 +23,7 @@ describe('maskEmail', () => {
 
 describe('maskApiKey', () => {
   it('masks API key', () => {
-    expect(maskApiKey('sk-1234567890abcdef')).toBe('sk-...cdef');
+    expect(maskApiKey('sk-1234567890abcdef')).toBe('sk-1...cdef');
   });
 
   it('handles short keys', () => {

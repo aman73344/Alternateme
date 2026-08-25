@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
   // pgvector, citext, and uuid-ossp extensions are expected but not required here
   // They will be installed manually if needed
 }
@@ -63,6 +64,36 @@ enum SourceStatus {
   READY
   FAILED
   DELETED
+}
+
+// Phase 3 — per-job/stage state for the knowledge ingestion pipeline
+enum IngestionStage {
+  QUEUED
+  PROCESSING
+  EXTRACTING
+  CLEANING
+  CHUNKING
+  EMBEDDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  RETRYING
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  OCR_REQUIRED
+  DELETED
+}
+
+enum KnowledgeVersionStatus {
+  PENDING
+  ACTIVE
+  SUPERSEDED
+  FAILED
 }
 
 enum MessageRole {
@@ -219,6 +250,11 @@ model User {
   onboardings        Onboarding[]
   personas           Persona[]
   aiProviderConfigs  AIProviderConfig[]
+  knowledgeDocuments    KnowledgeDocument[] @relation("KnowledgeDocumentUser")
+  documentChunks        DocumentChunk[]     @relation("DocumentChunkUser")
+  embeddings            Embedding[]         @relation("EmbeddingUser")
+  knowledgeJobs         IngestionJob[]      @relation("IngestionJobUser")
+  knowledgeVersions     KnowledgeVersion[]  @relation("KnowledgeVersionUser")
 
   @@index([email])
   @@index([username])
@@ -407,6 +443,11 @@ model Alternate {
   emailThreads  EmailThread[]
   callRecords   CallRecord[]
   chunks        ContentChunk[]
+  knowledgeDocuments KnowledgeDocument[] @relation("KnowledgeDocumentAlternate")
+  documentChunks     DocumentChunk[]     @relation("DocumentChunkAlternate")
+  embeddings         Embedding[]         @relation("EmbeddingAlternate")
+  knowledgeJobs      IngestionJob[]      @relation("IngestionJobAlternate")
+  knowledgeVersions  KnowledgeVersion[]  @relation("KnowledgeVersionAlternate")
 
   @@index([userId])
   @@index([username])
@@ -471,26 +512,45 @@ model Persona {
 // ===========================================================================
 
 model TrainingSource {
-  id           String       @id @default(uuid()) @db.Uuid
-  alternateId  String       @db.Uuid
-  userId       String       @db.Uuid
-  type         SourceType
-  origin       String?
-  name         String
-  url          String?
-  fileName     String?
-  mimeType     String?
-  fileSize     Int?
-  status       SourceStatus @default(PENDING)
-  wordCount    Int?
-  errorMessage String?
-  lastSyncedAt DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id              String       @id @default(uuid()) @db.Uuid
+  alternateId     String       @db.Uuid
+  userId          String       @db.Uuid
+  type            SourceType
+  origin          String?
+  name            String
+  url             String?
+  fileName        String?
+  mimeType        String?
+  fileSize        Int?
+  status          SourceStatus @default(PENDING)
 
-  alternate Alternate    @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chunks    ContentChunk[]
+  // Phase 3 — object storage + ingestion bookkeeping
+  storageKey      String?
+  storageBucket   String?
+  storageUrl      String?
+  checksum        String?
+  currentVersion  Int          @default(0)
+  processingStage String?
+  chunkCount      Int          @default(0)
+  documentCount   Int          @default(0)
+  wordCount       Int?
+  errorCode       String?
+  errorMessage    String?
+  lastSyncedAt    DateTime?
+  lastProcessedAt DateTime?
+  processedAt     DateTime?
+  failedAt        DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  alternate        Alternate          @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks           ContentChunk[]
+  documents        KnowledgeDocument[] @relation("KnowledgeDocumentSource")
+  documentChunks   DocumentChunk[]     @relation("DocumentChunkSource")
+  ingestionJobs    IngestionJob[]      @relation("IngestionJobSource")
+  knowledgeVersions KnowledgeVersion[] @relation("KnowledgeVersionSource")
+  embeddings       Embedding[]         @relation("EmbeddingSource")
 
   @@index([alternateId])
   @@index([userId])
@@ -541,6 +601,177 @@ model TrainingJob {
   @@index([userId])
   @@index([status])
   @@map("training_jobs")
+}
+// ===========================================================================
+// PHASE 3 — KNOWLEDGE INGESTION & PROCESSING
+//
+// A TrainingSource owns zero..n KnowledgeDocuments. Each KnowledgeDocument
+// represents ONE extraction + cleaning pass of the source at a given version.
+// DocumentChunk stores cleaned, chunked content. Embedding stores the pgvector
+// vector for a chunk/model. IngestionJob tracks one async processing run.
+// KnowledgeVersion tracks the version chain (only ACTIVE is retrieval eligible).
+// ===========================================================================
+
+model KnowledgeDocument {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  alternateId    String         @db.Uuid
+  sourceId       String         @db.Uuid
+  title          String
+  mimeType       String?
+  language       String         @default("en")
+  characterCount Int            @default(0)
+  wordCount      Int            @default(0)
+  pageCount      Int            @default(0)
+  checksum       String? // sha-256 of the normalized content for idempotency
+  version        Int            @default(0)
+  status         DocumentStatus @default(PENDING)
+  processedAt    DateTime?
+  failedAt       DateTime?
+  errorCode      String?
+  errorMessage   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user             User                @relation("KnowledgeDocumentUser", fields: [userId], references: [id], onDelete: Cascade)
+  alternate        Alternate           @relation("KnowledgeDocumentAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  source           TrainingSource      @relation("KnowledgeDocumentSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  chunks           DocumentChunk[]     @relation("DocumentChunkDocument")
+  knowledgeVersion KnowledgeVersion? @relation("KnowledgeVersionDocument")
+  embeddings       Embedding[]       @relation("EmbeddingDocument")
+  ingestionJobs    IngestionJob[]    @relation("IngestionJobDocument")
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([version])
+  @@index([status])
+  @@map("knowledge_documents")
+}
+
+model DocumentChunk {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  alternateId    String   @db.Uuid
+  sourceId       String   @db.Uuid
+  documentId     String   @db.Uuid
+  version        Int      @default(0)
+  chunkIndex     Int
+  content        String   @db.Text
+  tokenCount     Int      @default(0)
+  characterCount Int      @default(0)
+  heading        String?
+  metadata       Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user       User               @relation("DocumentChunkUser", fields: [userId], references: [id], onDelete: Cascade)
+  alternate  Alternate          @relation("DocumentChunkAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  source     TrainingSource     @relation("DocumentChunkSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  document   KnowledgeDocument  @relation("DocumentChunkDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  embeddings Embedding[]        @relation("EmbeddingChunk")
+
+  @@unique([userId, version, chunkIndex])
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([documentId])
+  @@index([version])
+  @@index([isActive])
+  @@map("document_chunks")
+}
+
+model Embedding {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  alternateId String   @db.Uuid
+  sourceId    String   @db.Uuid
+  documentId  String   @db.Uuid
+  chunkId     String   @db.Uuid
+  version     Int      @default(0)
+  model       String
+  modelDimensions Int  @default(1536)
+  tokenCount  Int?
+  // pgvector column. Dimension fixed at schema level (1536). Changing the
+  // embedding model's dimension requires a schema migration of this column.
+  vector      Unsupported("vector(1536)")?
+  createdAt   DateTime @default(now())
+
+  user      User               @relation("EmbeddingUser", fields: [userId], references: [id], onDelete: Cascade)
+  alternate Alternate          @relation("EmbeddingAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  source    TrainingSource     @relation("EmbeddingSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  document  KnowledgeDocument  @relation("EmbeddingDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  chunk     DocumentChunk      @relation("EmbeddingChunk", fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([documentId])
+  @@index([chunkId])
+  @@index([version])
+  @@map("embeddings")
+}
+model IngestionJob {
+  id           String         @id @default(uuid()) @db.Uuid
+  userId       String         @db.Uuid
+  alternateId  String         @db.Uuid
+  sourceId     String         @db.Uuid
+  documentId   String?        @db.Uuid
+  version      Int            @default(0)
+  type         String         @default("INGEST") // INGEST | REPROCESS | CLEANUP | SYNC
+  status       IngestionStage @default(QUEUED)
+  stage        String? // human readable current stage label
+  attempts     Int            @default(0)
+  maxAttempts  Int            @default(3)
+  progress     Int            @default(0) // 0..100 when measurable, else stage-driven
+  isRetryable  Boolean        @default(false)
+  errorCode    String?
+  errorMessage String?
+  payload      Json?
+  result       Json?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  failedAt     DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  alternate Alternate          @relation("IngestionJobAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  user      User               @relation("IngestionJobUser", fields: [userId], references: [id], onDelete: Cascade)
+  source    TrainingSource     @relation("IngestionJobSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  document  KnowledgeDocument? @relation("IngestionJobDocument", fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("ingestion_jobs")
+}
+
+model KnowledgeVersion {
+  id           String                 @id @default(uuid()) @db.Uuid
+  userId       String                 @db.Uuid
+  alternateId  String                 @db.Uuid
+  sourceId     String                 @db.Uuid
+  documentId   String                 @unique @db.Uuid
+  version      Int
+  status       KnowledgeVersionStatus @default(PENDING)
+  chunkCount   Int                    @default(0)
+  checksum     String?
+  createdAt    DateTime               @default(now())
+  supersededAt DateTime?
+
+  user      User               @relation("KnowledgeVersionUser", fields: [userId], references: [id], onDelete: Cascade)
+  alternate Alternate          @relation("KnowledgeVersionAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  source    TrainingSource     @relation("KnowledgeVersionSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  document  KnowledgeDocument  @relation("KnowledgeVersionDocument", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, version])
+  @@index([userId])
+  @@index([alternateId])
+  @@index([status])
+  @@map("knowledge_versions")
 }
 
 // ===========================================================================

@@ -30,7 +30,9 @@ export default defineConfig({
     hookTimeout: 30000,
     teardownTimeout: 10000,
     sequence: {
-      shuffle: true,
+      // Integration suites share sequential state (auth token → alternateId),
+      // so randomized order breaks them. Keep deterministic ordering.
+      shuffle: false,
     },
     reporters: ['default', 'json'],
   },

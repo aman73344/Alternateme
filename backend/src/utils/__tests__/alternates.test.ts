@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { prisma } from '@/database';
 import { alternateService } from '@/alternates/alternate.service';
 import { onboardingService } from '@/onboarding/onboarding.service';
@@ -8,14 +8,29 @@ import { ConflictError, NotFoundError, BusinessError } from '@/utils/errors';
 
 describe('Alternates Module', () => {
   beforeEach(async () => {
-    // Clean up in reverse dependency order
-    await prisma.trainingSource.deleteMany();
-    await prisma.aIProviderConfig.deleteMany();
-    await prisma.voiceProfile.deleteMany();
-    await prisma.persona.deleteMany();
-    await prisma.onboarding.deleteMany();
-    await prisma.alternate.deleteMany();
-    await prisma.user.deleteMany();
+    // Clean up ONLY records owned by this suite's @test.com users.
+    // Never run unfiltered deleteMany() against a shared database —
+    // that would wipe real users and all of their onboarding data.
+    const scope = { user: { email: { endsWith: '@test.com' } } };
+    await prisma.trainingSource.deleteMany({ where: scope });
+    await prisma.aIProviderConfig.deleteMany({ where: scope });
+    await prisma.voiceProfile.deleteMany({ where: scope });
+    await prisma.persona.deleteMany({ where: scope });
+    await prisma.onboarding.deleteMany({ where: scope });
+    await prisma.alternate.deleteMany({ where: scope });
+    await prisma.user.deleteMany({ where: { email: { endsWith: '@test.com' } } });
+  });
+
+  // Final cleanup so the suite never leaves test data behind.
+  afterAll(async () => {
+    const scope = { user: { email: { endsWith: '@test.com' } } };
+    await prisma.trainingSource.deleteMany({ where: scope });
+    await prisma.aIProviderConfig.deleteMany({ where: scope });
+    await prisma.voiceProfile.deleteMany({ where: scope });
+    await prisma.persona.deleteMany({ where: scope });
+    await prisma.onboarding.deleteMany({ where: scope });
+    await prisma.alternate.deleteMany({ where: scope });
+    await prisma.user.deleteMany({ where: { email: { endsWith: '@test.com' } } });
   });
 
   async function createUser(email: string, username: string) {
@@ -282,7 +297,8 @@ describe('Alternates Module', () => {
       });
 
       expect(result.provider).toBe('OPENAI');
-      expect(result.status).toBe('VALID');
+      // Key stored encrypted as PENDING — live validation deferred (Phase 5)
+      expect(result.status).toBe('PENDING');
 
       const config = await prisma.aIProviderConfig.findUnique({ where: { alternateId } });
       expect(config?.encryptedApiKey).toBeDefined();
@@ -333,7 +349,9 @@ describe('Alternates Module', () => {
       ).rejects.toThrow(BusinessError);
     });
 
-    it('should publish successfully with required steps completed', async () => {
+    // The full publish flow performs dozens of sequential round-trips to the
+    // remote Postgres (Neon); allow a generous timeout for this test.
+    it('should publish successfully with required steps completed', { timeout: 120_000 }, async () => {
       const user = await createUser('publish@test.com', 'publishuser');
       const { alternateId } = await onboardingService.startOnboarding(user.id, {
         username: 'publish-alt',
