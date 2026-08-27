@@ -523,7 +523,7 @@ describe('Alternates Module', () => {
         url: 'https://example.com',
       });
 
-      await sourceService.deleteSource(source.id, user.id);
+      await sourceService.deleteSource(alternateId, source.id, user.id);
 
       const found = await prisma.trainingSource.findUnique({ where: { id: source.id } });
       expect(found?.status).toBe('DELETED');
@@ -548,7 +548,7 @@ describe('Alternates Module', () => {
       });
 
       await expect(
-        sourceService.deleteSource(source.id, userB.id)
+        sourceService.deleteSource(alternateId, source.id, userB.id)
       ).rejects.toThrow(NotFoundError);
     });
   });

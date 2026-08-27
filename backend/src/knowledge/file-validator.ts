@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { config } from '@/config';
 import { KnowledgeError } from './knowledge.errors';
-import { detectMimeFromMagic, getFileProfile } from './knowledge.constants';
+import { detectMagicMime, getFileProfile } from './knowledge.constants';
 
 export interface FileValidationResult {
   mimeType: string;
@@ -50,7 +50,7 @@ export function validateUploadedFile(buffer: Buffer, fileName?: string, claimedM
     throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', { fileName, kind: dangerous });
   }
 
-  const magicMime = detectMimeFromMagic(new Uint8Array(buffer.subarray(0, 64)));
+  const magicMime = detectMagicMime(new Uint8Array(buffer.subarray(0, 64)));
   const effectiveMime = magicMime || (claimedMime && !claimedMime.startsWith('application/octet-stream') ? claimedMime : undefined);
   const profile = getFileProfile(effectiveMime, fileName);
 

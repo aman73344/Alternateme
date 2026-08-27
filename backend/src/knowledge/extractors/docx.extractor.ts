@@ -9,17 +9,13 @@ import type { ExtractionResult } from '../knowledge.types';
  * Convert mammoth's HTML output into lightweight markdown so headings, lists
  * and tables keep structural meaning for the chunker (which reads `#` markers).
  * This is a compact transformer; self-closing/void tags and parser quirks are
- * toleraated because the result goes through ContentCleaner afterwards.
+ * tolerable because the result goes through ContentCleaner afterwards.
  */
 export function htmlToKnowledgeMarkdown(html: string): string {
   let s = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '');
 
-  const depth = (m: string) => {
-    const level = Number(m.replace(/\D/g, ''));
-    return '#'.repeat(Math.min(6, level));
-  };
   s = s.replace(/<\/h([1-6])>/gi, (_, n) => `\n${'#'.repeat(Number(n))} `);
   s = s.replace(/<li>/gi, '\n- ');
   s = s.replace(/<td>/gi, ' | ');
@@ -53,7 +49,7 @@ export class DocxExtractor implements DocumentExtractor {
       throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', undefined, 'DOCX source is missing its file content');
     }
     try {
-      const result = await mammoth.convertToHtml({ buffer: source.buffer, includeDefaultStyleMap: true });
+      const result = await mammoth.convertToHtml({ buffer: source.buffer });
       const content = htmlToKnowledgeMarkdown(result.value || '');
       if (!content || content.trim().length === 0) {
         throw new KnowledgeError('CORRUPT_DOCUMENT', { fileName: source.fileName });

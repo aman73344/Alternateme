@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { config } from '@/config';
 import type { EmbeddingProvider, EmbeddingProviderOptions, EmbeddingResult } from './embedding.provider';
 
 /**
@@ -12,8 +13,10 @@ export class DeterministicEmbeddingProvider implements EmbeddingProvider {
   readonly id = 'deterministic';
   readonly dimensions: number;
 
-  constructor(private readonly opts: EmbeddingProviderOptions) {
-    this.dimensions = opts.dimensions;
+  constructor(opts: EmbeddingProviderOptions) {
+    // Defaults to the same dimension as the pgvector column created by the
+    // phase-3 migration (vector(1536)) and EMBEDDING_DIMENSIONS.
+    this.dimensions = opts.dimensions ?? config.knowledge.embedding.dimensions;
   }
 
   private vectorFor(text: string): number[] {

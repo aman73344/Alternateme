@@ -672,7 +672,10 @@ model DocumentChunk {
   document   KnowledgeDocument  @relation("DocumentChunkDocument", fields: [documentId], references: [id], onDelete: Cascade)
   embeddings Embedding[]        @relation("EmbeddingChunk")
 
-  @@unique([userId, version, chunkIndex])
+  // Identity of a chunk within a source generation. Scoped by sourceId (NOT
+  // userId alone) so two sources owned by the same user can both have
+  // version/chunkIndex 0 without colliding.
+  @@unique([sourceId, version, chunkIndex])
   @@index([userId])
   @@index([alternateId])
   @@index([sourceId])

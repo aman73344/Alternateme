@@ -29,7 +29,9 @@ export interface EmbeddingServiceOptions {
  * batch on partial failure.
  */
 export class EmbeddingService {
-  private readonly options: Required<EmbeddingServiceOptions>;
+  /** All option fields have config defaults except the optional API key. */
+  private readonly options: Omit<Required<EmbeddingServiceOptions>, 'apiKey'> &
+    Pick<EmbeddingServiceOptions, 'apiKey'>;
 
   constructor(options: EmbeddingServiceOptions = {}) {
     this.options = {
@@ -45,6 +47,10 @@ export class EmbeddingService {
 
   get providerName(): string {
     return this.options.provider;
+  }
+
+  get modelName(): string {
+    return this.options.model;
   }
 
   get dimensions(): number {

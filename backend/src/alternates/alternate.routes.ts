@@ -10,6 +10,7 @@ import {
   updateAlternateSchema,
 } from './alternate.schema';
 import { voiceSchema } from '@/onboarding/onboarding.schema';
+import { reprocessSourceSchema } from '@/sources/source.schema';
 import { asyncHandler } from '@/utils/asyncHandler';
 
 const router: import('express').Router = Router();
@@ -26,8 +27,10 @@ router.get('/', asyncHandler((req, res) => alternateController.getUserAlternates
 // Sub-resources must be declared before /:id to avoid route shadowing
 // Knowledge source sub-resources (spec: /alternates/:alternateId/sources)
 router.get('/:alternateId/sources', requireAlternateOwnership, asyncHandler((req, res) => sourceController.getSources(req, res)));
-
+router.get('/:alternateId/sources/:sourceId', requireAlternateOwnership, asyncHandler((req, res) => sourceController.getSourceStatus(req, res)));
+router.post('/:alternateId/sources/:sourceId/reprocess', requireAlternateOwnership, validate(reprocessSourceSchema), asyncHandler((req, res) => sourceController.reprocessSource(req, res)));
 router.delete('/:alternateId/sources/:sourceId', requireAlternateOwnership, asyncHandler((req, res) => sourceController.deleteSource(req, res)));
+router.get('/:alternateId/knowledge/status', requireAlternateOwnership, asyncHandler((req, res) => sourceController.getKnowledgeStatus(req, res)));
 
 // Voice sub-resource (spec: /alternates/:alternateId/voice)
 router.put('/:alternateId/voice', requireAlternateOwnership, validate(voiceSchema), asyncHandler((req, res) => voiceController.saveVoice(req, res)));

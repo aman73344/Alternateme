@@ -17,14 +17,19 @@ interface Segment {
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 const CODE_FENCE_RE = /^```/;
 
+/** Sentence boundary heuristic — keeps abbreviations ("Dr.", "U.S.") intact. */
 export function splitIntoSentences(text: string): string[] {
-  // Sentence boundary heuristic — keeps abbreviations ("Dr.", "U.S.") intact.
   const parts = text
     .replace(/\s+/g, ' ')
     .split(/(?<=[.!?])\s+(?=[A-Z0-9"'(])/);
   return parts.filter((p) => p.trim().length > 0);
 }
 
+/**
+ * Split cleaned content into semantic segments: headings, fenced code blocks,
+ * list blocks and paragraphs. Blank lines separate blocks; a heading always
+ * terminates the preceding paragraph so sections stay attributable.
+ */
 export function tokenizeSegments(content: string): Segment[] {
   const segments: Segment[] = [];
   const lines = content.split('\n');
@@ -38,7 +43,7 @@ export function tokenizeSegments(content: string): Segment[] {
       continue;
     }
 
-    // Code block
+    // Code block — fences stay intact so code semantics survive chunking.
     if (CODE_FENCE_RE.test(trimmed)) {
       const blockLines: string[] = [line];
       i += 1;
@@ -52,28 +57,39 @@ export function tokenizeSegments(content: string): Segment[] {
       continue;
     }
 
-    // Markdown heading
+    // Markdown heading — a single logical unit; following paragraphs carry it
+    // as their active-heading prefix (see ChunkingService.chunk).
     const headingMatch = trimmed.match(HEADING_RE);
     if (headingMatch) {
-      const level = headingMatch[1].length;
-      let headingText = `# ${headingMatch[2].trim()}`;
+      segments.push({ text: trimmed, type: 'heading', level: headingMatch[1].length });
       i += 1;
-      while (i < lines.length && lines[i].trim() !== '') {
-        headingText += ` ${lines[i].trim()}`;
-        i += 1;
-      }
-      segments.push({ text: headingText, type: 'heading', level });
       continue;
     }
 
-    // Paragraph or list item: collect until blank line, preserving list markers.
+    // Paragraph or list item: collect until a blank line, fence or heading,
+    // preserving list markers.
     const block: string[] = [line];
     i += 1;
-    while (i < lines.length && lines[i].trim() !== '' && !CODE_FENCE_RE.test(lines[i].trim())) {
-function greedyPack(units: string[], options: {
-  chunkSize: number;
-  maxChunkSize: number;
-}): string[] {
+    while (
+      i < lines.length &&
+      lines[i].trim() !== '' &&
+      !CODE_FENCE_RE.test(lines[i].trim()) &&
+      !HEADING_RE.test(lines[i].trim())
+    ) {
+      block.push(lines[i]);
+      i += 1;
+    }
+    const isList = block.every((l) => /^(\s*[-*+]|\s*\d+[.)])\s/.test(l.trim()));
+    segments.push({ text: block.join('\n'), type: isList ? 'list' : 'paragraph', level: 0 });
+  }
+  return segments;
+}
+
+/** Greedy-pack semantic units into chunk-sized strings without splitting units. */
+function greedyPack(
+  units: string[],
+  options: { chunkSize: number; maxChunkSize: number },
+): string[] {
   const chunks: string[] = [];
   let current = '';
   for (const unit of units) {
@@ -97,12 +113,16 @@ function greedyPack(units: string[], options: {
           chunks[chunks.length - 1] = `${chunks[chunks.length - 1]}\n\n${sentence}`.trimEnd();
         }
       }
+      // A single sentence can still exceed the ceiling — hard-wrap it.
       for (let k = 0; k < chunks.length; k += 1) {
         if (chunks[k].length > options.maxChunkSize) {
-          const sliced = chunks[k];
-          chunks[k] = sliced.slice(0, options.maxChunkSize);
-          const rest = sliced.slice(options.maxChunkSize).trim();
-          if (rest) chunks.splice(k + 1, 0, rest);
+          const pieces: string[] = [];
+          for (let start = 0; start < chunks[k].length; start += options.maxChunkSize) {
+            const piece = chunks[k].slice(start, start + options.maxChunkSize).trimEnd();
+            if (piece) pieces.push(piece);
+          }
+          chunks.splice(k, 1, ...pieces);
+          k += pieces.length - 1;
         }
       }
       current = '';
@@ -189,13 +209,4 @@ export class ChunkingService {
       };
     });
   }
-}
-      if (HEADING_RE.test(lines[i].trim())) break;
-      block.push(lines[i]);
-      i += 1;
-    }
-    const isList = block.every((l) => /^(\s*[-*+]|\s*\d+[.)])\s/.test(l.trim()));
-    segments.push({ text: block.join('\n'), type: isList ? 'list' : 'paragraph', level: 0 });
-  }
-  return segments;
 }

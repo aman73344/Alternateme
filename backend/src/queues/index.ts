@@ -10,6 +10,11 @@ export enum QueueName {
   ANALYTICS = 'analytics',
   CLEANUP = 'cleanup',
   RETRY = 'retry',
+  KNOWLEDGE_INGESTION = 'knowledge-ingestion',
+  DOCUMENT_PROCESSING = 'document-processing',
+  EMBEDDING_GENERATION = 'embedding-generation',
+  KNOWLEDGE_CLEANUP = 'knowledge-cleanup',
+  KNOWLEDGE_RETRY = 'knowledge-retry',
 }
 
 // Completely lazy - no connection setup at module load time
@@ -68,6 +73,11 @@ export const voiceQueue = () => getQueue(QueueName.VOICE);
 export const analyticsQueue = () => getQueue(QueueName.ANALYTICS);
 export const cleanupQueue = () => getQueue(QueueName.CLEANUP);
 export const retryQueue = () => getQueue(QueueName.RETRY);
+export const knowledgeIngestionQueue = () => getQueue(QueueName.KNOWLEDGE_INGESTION);
+export const documentProcessingQueue = () => getQueue(QueueName.DOCUMENT_PROCESSING);
+export const embeddingGenerationQueue = () => getQueue(QueueName.EMBEDDING_GENERATION);
+export const knowledgeCleanupQueue = () => getQueue(QueueName.KNOWLEDGE_CLEANUP);
+export const knowledgeRetryQueue = () => getQueue(QueueName.KNOWLEDGE_RETRY);
 
 export async function closeAllQueues(): Promise<void> {
   const allQueues = Array.from(queues.values()).filter((q): q is Queue => q !== null);

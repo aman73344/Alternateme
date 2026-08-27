@@ -11,6 +11,13 @@ export interface FetchedResource {
   status: number;
 }
 
+export interface FetchUrlOptions {
+  timeoutMs?: number;
+  maxRedirects?: number;
+  maxResponseSize?: number;
+  userAgent?: string;
+}
+
 /** IPv4 private/reserved subnet checks (10/8, 172.16/12, 192.168/16, ...). */
 function isPrivateIPv4(ip: string): boolean {
   const parts = ip.split('.').map(Number);
@@ -38,7 +45,7 @@ function isPrivateIPv6(ip: string): boolean {
     lower.startsWith('fe9') ||
     lower.startsWith('fea') ||
     lower.startsWith('feb') ||
-    lower.startsWith('::ffff:127.') // IPv4-mapped loopback
+    lower.includes('::ffff:127.') // IPv4-mapped loopback
   );
 }
 
@@ -49,9 +56,16 @@ export function isPrivateAddress(address: string): boolean {
   return true; // non-IP or malformed — treat as unsafe
 }
 
+/**
+ * Defence-in-depth DNS guard: resolves every hostname and rejects any address
+ * in private/reserved space BEFORE a socket is ever opened. This blocks cloud
+ * metadata endpoints (169.254.169.254), localhost tricks and DNS rebinding
+ * aimed at internal networks.
+ */
 export async function assertHostnameSafe(hostname: string): Promise<void> {
-  if (validateSourceUrl(`https://${hostname}/`).valid === false) {
-    throw new KnowledgeError('URL_BLOCKED', { hostname }, 'Hostname is blocked by ingestion policy');
+  const validation = validateSourceUrl(`https://${hostname}/`);
+  if (!validation.valid) {
+    throw new KnowledgeError(validation.error || 'URL_BLOCKED', { hostname }, 'Hostname is blocked by ingestion policy');
   }
   let addresses: { address: string }[];
   try {
@@ -79,6 +93,8 @@ export const ACCEPTED_CONTENT_TYPES = [
 export function isAcceptedContentType(type: string): boolean {
   const t = type.split(';')[0].trim().toLowerCase();
   return ACCEPTED_CONTENT_TYPES.includes(t) || t.startsWith('text/');
+}
+
 /**
  * SSRF-safe HTTP(S) fetch. Every redirect target is re-validated (DNS + each
  * IP checked against private/reserved ranges, protocol enforced). The body is
@@ -118,7 +134,11 @@ export async function fetchUrl(
       if (err instanceof Error && err.name === 'AbortError') {
         throw new KnowledgeError('FETCH_TIMEOUT', { url: current });
       }
-      throw new KnowledgeError('FETCH_FAILED', { url: current }, err instanceof Error ? err.message : undefined);
+      throw new KnowledgeError(
+        'FETCH_FAILED',
+        { url: current },
+        err instanceof Error ? err.message : undefined,
+      );
     } finally {
       clearTimeout(timer);
     }
@@ -128,7 +148,11 @@ export async function fetchUrl(
       const location = res.headers.get('location');
       await res.body?.cancel().catch(() => {});
       if (!location || redirects >= maxRedirects) {
-        throw new KnowledgeError('URL_BLOCKED', { url: current, status: res.status }, 'Too many redirects');
+        throw new KnowledgeError(
+          'URL_BLOCKED',
+          { url: current, status: res.status },
+          'Too many redirects',
+        );
       }
       current = new URL(location, current).toString();
       redirects += 1;
@@ -138,7 +162,11 @@ export async function fetchUrl(
     if (res.status === 200 || res.status === 201) {
       const contentType = res.headers.get('content-type') || '';
       if (!isAcceptedContentType(contentType)) {
-        throw new KnowledgeError('URL_BLOCKED', { url: current, contentType }, 'Response content type is not ingestible');
+        throw new KnowledgeError(
+          'URL_BLOCKED',
+          { url: current, contentType },
+          'Response content type is not ingestible',
+        );
       }
 
       const chunks: Buffer[] = [];
@@ -165,11 +193,4 @@ export async function fetchUrl(
     throw new KnowledgeError('FETCH_FAILED', { url: current, status: res.status });
   }
 }
-}
 
-export interface FetchUrlOptions {
-  timeoutMs?: number;
-  maxRedirects?: number;
-  maxResponseSize?: number;
-  userAgent?: string;
-}

@@ -62,6 +62,22 @@ export class KnowledgeChunkRepository {
     return prisma.documentChunk.count({ where: where as Prisma.DocumentChunkWhereInput });
   }
 
+  async getChunkIdsForDocument(documentId: string, version: number): Promise<Array<{ id: string; chunkIndex: number }>> {
+    return prisma.documentChunk.findMany({
+      where: { documentId, version },
+      select: { id: true, chunkIndex: true },
+      orderBy: { chunkIndex: 'asc' },
+    });
+  }
+
+  async getChunksForDocument(documentId: string, version: number): Promise<Array<{ id: string; content: string; chunkIndex: number }>> {
+    return prisma.documentChunk.findMany({
+      where: { documentId, version },
+      select: { id: true, content: true, chunkIndex: true },
+      orderBy: { chunkIndex: 'asc' },
+    });
+  }
+
   async insertEmbeddings(rows: EmbeddingRowInput[]): Promise<void> {
     if (rows.length === 0) return;
     const values = rows
