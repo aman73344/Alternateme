@@ -8,6 +8,13 @@ export default defineConfig({
     root: 'src',
     include: ['**/*.test.ts', '**/*.spec.ts'],
     exclude: ['node_modules', 'dist'],
+    env: {
+      // Tests must never call the real OpenAI API: the deterministic provider
+      // derives stable local vectors so the full pipeline (extract → clean →
+      // chunk → embed → pgvector) is verified hermetically. Production runs
+      // outside vitest and uses EMBEDDING_PROVIDER=openai from .env.
+      EMBEDDING_PROVIDER: 'deterministic',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -26,8 +33,11 @@ export default defineConfig({
       },
     },
     setupFiles: ['./src/tests/setup.ts'],
-    testTimeout: 30000,
-    hookTimeout: 30000,
+    // Integration suites run the full pipeline against remote PostgreSQL
+    // (Neon). Each Prisma round trip can cost ~250-500ms and one ingestion
+    // issues dozens of queries, so per-test budgets must be generous.
+    testTimeout: 180000,
+    hookTimeout: 180000,
     teardownTimeout: 10000,
     sequence: {
       // Integration suites share sequential state (auth token → alternateId),

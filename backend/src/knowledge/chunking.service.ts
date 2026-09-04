@@ -177,14 +177,15 @@ export class ChunkingService {
     const segments = tokenizeSegments(content);
 
     // Build paragraph-sized semantic units (paragraphs and list blocks stay
-    // together). Active headings are used as descriptive prefixes so a chunk
-    // still knows which section it belongs to and that context is preserved.
+    // together). Markdown heading lines keep their raw `#` markers in the chunk
+    // content (spec: don't destroy Markdown semantics unnecessarily), while the
+    // stripped text is used as the descriptive prefix for following sections.
     const units: string[] = [];
     const headings: string[] = [];
     for (const seg of segments) {
       if (seg.type === 'heading') {
         headings.push(seg.text.replace(/^#+\s*/, ''));
-        units.push(headings[headings.length - 1]);
+        units.push(seg.text);
       } else {
         const prefix = headings.length > 0 ? headings[headings.length - 1] : undefined;
         units.push(prefix ? `${prefix}\n\n${seg.text}` : seg.text);

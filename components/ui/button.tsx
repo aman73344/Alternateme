@@ -44,14 +44,33 @@ function Button({
   className,
   variant = 'default',
   size = 'default',
+  asChild = false,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
+  // shadcn-style composition: with `asChild`, the single child element
+  // (e.g. a next/link <Link>) is rendered in place of the <button> and
+  // inherits the button's classes — implemented via Base UI's `render` prop.
+  if (asChild) {
+    return (
+      <ButtonPrimitive
+        data-slot="button"
+        nativeButton={false}
+        className={cn(buttonVariants({ variant, size, className }))}
+        render={children as React.ReactElement}
+        {...props}
+      />
+    )
+  }
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {children}
+    </ButtonPrimitive>
   )
 }
 

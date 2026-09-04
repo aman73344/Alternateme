@@ -21,6 +21,12 @@ export enum QueueName {
 const queues = new Map<string, Queue | null>();
 
 function getConnection(): ConnectionOptions | undefined {
+  // Queues are fully disabled when explicitly turned off (hermetic test runs)
+  // or when no Redis URL is configured. Callers treat null queues as "job is
+  // persisted in the DB only" and never fail the request because of it.
+  if (!config.redis.enabled) {
+    return undefined;
+  }
   try {
     return {
       url: config.redis.url,
@@ -56,6 +62,12 @@ function getQueue(name: QueueName): Queue | null {
       },
     });
     queues.set(name, queue);
+    // Without a listener, a dead/restarting Redis raises an unhandled 'error'
+    // event that would crash the API/worker process. Degrade gracefully
+    // instead: BullMQ retries the connection and jobs resume on recovery.
+    queue.on('error', (err) => {
+      logger.warn({ err, queue: name }, 'Queue connection error; processing resumes when Redis recovers');
+    });
     logger.info({ queue: name }, 'Queue created');
     return queue;
   } catch (err) {

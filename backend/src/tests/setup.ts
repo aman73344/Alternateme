@@ -8,6 +8,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+// Hermetic integration runs: Redis/BullMQ is intentionally bypassed (the
+// pipeline under test drives KnowledgeIngestionService directly). Without this,
+// an unreachable Redis host would add nondeterministic connection errors and
+// every queue operation would wait on DNS. Jobs stay QUEUED in the DB instead.
+(process.env as Record<string, string>).QUEUE_ENABLED = 'false';
+
 // Ensure required test env vars exist (fall back to test values if not in .env)
 if (!process.env.JWT_ACCESS_SECRET) {
   (process.env as Record<string, string>).JWT_ACCESS_SECRET = 'test-access-secret-minimum-32-chars!!';

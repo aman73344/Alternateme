@@ -1,0 +1,6 @@
+Alternate Me knowledge fixture.
+
+This plain-text document is ingested end to end.
+It contains multiple sentences so the chunker can demonstrate sentence preservation. Cache coherence matters.
+
+The quick brown fox jumps over the lazy dog repeatedly.

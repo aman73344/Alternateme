@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '@/config';
 import { logger } from '@/utils/logger';
-import { extractorRegistry } from './extractors/extractor.registry';
+import { extractorRegistry, registerExtractors } from './extractors';
 import { sourceResolver } from './source-resolver';
 import { ContentCleaner } from './content-cleaner';
 import { ChunkingService } from './chunking.service';
@@ -56,10 +56,14 @@ export class KnowledgeIngestionService {
   async ingest(jobData: IngestionJobData): Promise<IngestOutcome> {
     const { jobId, userId, alternateId, sourceId, force } = jobData;
 
-    await knowledgeRepository.markJobStarted(jobId);
-    const source = (await knowledgeSourceRepository.getSource(sourceId, userId, alternateId)) as SourceLike;
-    await knowledgeSourceRepository.markSourceProcessing(sourceId, 'EXTRACTING');
-    await knowledgeRepository.markJobStage(jobId, 'EXTRACTING', 'EXTRACTING', 25);
+    const [source, _started] = await Promise.all([
+      knowledgeSourceRepository.getSource(sourceId, userId, alternateId) as Promise<SourceLike>,
+      knowledgeRepository.markJobStarted(jobId),
+    ]);
+    await Promise.all([
+      knowledgeSourceRepository.markSourceProcessing(sourceId, 'EXTRACTING'),
+      knowledgeRepository.markJobStage(jobId, 'EXTRACTING', 'EXTRACTING', 25),
+    ]);
 
     const nextVersion = this.nextVersion(source);
     const extractSource = await sourceResolver.resolve(source);
@@ -70,8 +74,10 @@ export class KnowledgeIngestionService {
       return { documentId: '', version: nextVersion, chunkCount: 0, checksum: '', ocrRequired: true };
     }
 
-    await knowledgeSourceRepository.markSourceProcessing(sourceId, 'CLEANING');
-    await knowledgeRepository.markJobStage(jobId, 'CLEANING', 'CLEANING', 45);
+    await Promise.all([
+      knowledgeSourceRepository.markSourceProcessing(sourceId, 'CLEANING'),
+      knowledgeRepository.markJobStage(jobId, 'CLEANING', 'CLEANING', 45),
+    ]);
     const cleaned = this.cleaner.clean(extraction);
     if (!cleaned.content || !cleaned.content.trim()) {
       await this.fail(sourceId, jobId, 'EMPTY_DOCUMENT');
@@ -117,8 +123,10 @@ export class KnowledgeIngestionService {
     const { jobData, source, extraction, cleaned, checksum, nextVersion } = args;
     const { jobId, userId, alternateId, sourceId } = jobData;
 
-    await knowledgeSourceRepository.markSourceProcessing(sourceId, 'CHUNKING');
-    await knowledgeRepository.markJobStage(jobId, 'CHUNKING', 'CHUNKING', 60);
+    await Promise.all([
+      knowledgeSourceRepository.markSourceProcessing(sourceId, 'CHUNKING'),
+      knowledgeRepository.markJobStage(jobId, 'CHUNKING', 'CHUNKING', 60),
+    ]);
 
     const baseMetadata: Record<string, unknown> = {
       sourceType: source.type,
@@ -132,8 +140,10 @@ export class KnowledgeIngestionService {
       return { documentId: '', version: nextVersion, chunkCount: 0, checksum: '' };
     }
 
-    await knowledgeSourceRepository.markSourceProcessing(sourceId, 'EMBEDDING');
-    await knowledgeRepository.markJobStage(jobId, 'EMBEDDING', 'EMBEDDING', 70);
+    await Promise.all([
+      knowledgeSourceRepository.markSourceProcessing(sourceId, 'EMBEDDING'),
+      knowledgeRepository.markJobStage(jobId, 'EMBEDDING', 'EMBEDDING', 70),
+    ]);
 
     const embeddingService = this.buildEmbeddingService();
     const { vectors, tokenCounts } = await embeddingService.embed(chunks.map((c) => c.content));
@@ -236,6 +246,10 @@ export class KnowledgeIngestionService {
   }
 
   private async extract(extractSource: ExtractSource) {
+    // The registry is populated by the worker bootstrap, but the service must
+    // be self-sufficient regardless of entry point (worker, direct invocation,
+    // future HTTP trigger). registerExtractors is idempotent.
+    registerExtractors();
     const extractor = extractorRegistry.resolve(extractSource);
     if (!extractor) {
       throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', undefined, 'No extractor matched this source');

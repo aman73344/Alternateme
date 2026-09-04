@@ -22,6 +22,8 @@ interface Config {
   redis: {
     url: string;
     prefix: string;
+    /** Queues/Redis can be explicitly disabled (e.g. hermetic test runs). */
+    enabled: boolean;
   };
   jwt: {
     accessSecret: string;
@@ -52,6 +54,7 @@ interface Config {
     smtp: { host: string; port: number; user: string; pass: string; from: string };
   };
   storage: {
+    provider: string;
     accessKeyId: string;
     secretAccessKey: string;
     region: string;
@@ -137,6 +140,9 @@ const config: Config = {
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
     prefix: process.env.REDIS_PREFIX || 'altme',
+    // QUEUE_ENABLED=false (or no REDIS_URL) disables all BullMQ queues; callers
+    // receive null and must degrade gracefully (jobs stay QUEUED in the DB).
+    enabled: process.env.QUEUE_ENABLED !== 'false' && !!process.env.REDIS_URL,
   },
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || '',
@@ -190,6 +196,7 @@ const config: Config = {
     },
   },
   storage: {
+    provider: process.env.STORAGE_PROVIDER || 'auto',
     accessKeyId: process.env.STORAGE_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY || '',
     region: process.env.STORAGE_REGION || 'us-east-1',

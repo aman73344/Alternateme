@@ -5,7 +5,7 @@ import { StorageError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import { id } from '@/utils/helpers';
 
-type StorageProvider = 's3' | 'local';
+type StorageProviderChoice = 's3' | 'local';
 
 interface UploadResult {
   url: string;
@@ -98,9 +98,31 @@ class LocalStorageAdapter implements StorageAdapter {
 
 let storage: StorageAdapter | null = null;
 
+const PLACEHOLDER_CREDENTIALS = new Set(['', 'placeholder', 'your-access-key', 'your-secret-key']);
+
+/**
+ * Storage selection:
+ *   - STORAGE_PROVIDER=s3      → always the S3-compatible adapter
+ *   - STORAGE_PROVIDER=local   → always the disk adapter
+ *   - default ("auto")         → S3 only when real (non-placeholder)
+ *     credentials are present; otherwise the local disk adapter. This keeps a
+ *     dev/staging environment with placeholder creds from silently using a
+ *     stub that would fail on every download.
+ */
+function selectProvider(): StorageProviderChoice {
+  const explicit = process.env.STORAGE_PROVIDER;
+  if (explicit === 's3' || explicit === 'local') return explicit;
+
+  const hasRealCredentials =
+    !PLACEHOLDER_CREDENTIALS.has(config.storage.accessKeyId) &&
+    !PLACEHOLDER_CREDENTIALS.has(config.storage.secretAccessKey) &&
+    Boolean(config.storage.secretAccessKey);
+  return hasRealCredentials ? 's3' : 'local';
+}
+
 function getStorage(): StorageAdapter {
   if (!storage) {
-    const provider: StorageProvider = config.storage.accessKeyId ? 's3' : 'local';
+    const provider = selectProvider();
     storage = provider === 's3' ? new S3StorageAdapter() : new LocalStorageAdapter();
   }
   return storage;

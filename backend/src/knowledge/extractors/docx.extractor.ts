@@ -16,7 +16,13 @@ export function htmlToKnowledgeMarkdown(html: string): string {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '');
 
-  s = s.replace(/<\/h([1-6])>/gi, (_, n) => `\n${'#'.repeat(Number(n))} `);
+  // Convert whole heading elements (open + close) to markdown ATX headings so
+  // the chunker can attribute sections; the generic tag-strip later must not
+  // see the opening tag anymore.
+  s = s.replace(/<h([1-6])>([\s\S]*?)<\/h\1>/gi, (_, n, inner) => {
+    const text = inner.replace(/<[^>]*>/g, '').trim();
+    return `\n${'#'.repeat(Number(n))} ${text}`;
+  });
   s = s.replace(/<li>/gi, '\n- ');
   s = s.replace(/<td>/gi, ' | ');
   s = s.replace(/<th>/gi, ' | ');

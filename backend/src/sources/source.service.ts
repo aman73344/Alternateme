@@ -184,7 +184,11 @@ export const sourceService = {
 
     const q = knowledgeCleanupQueue();
     if (q) {
-      await q.add('cleanup', { sourceId, userId, alternateId });
+      try {
+        await q.add('cleanup', { sourceId, userId, alternateId });
+      } catch (err) {
+        logger.warn({ sourceId, err }, 'Failed to enqueue knowledge cleanup; purge can be re-run later');
+      }
     } else {
       logger.warn({ sourceId }, 'Redis unavailable; knowledge purge deferred');
     }
@@ -213,7 +217,14 @@ export const sourceService = {
       logger.warn({ sourceId: data.sourceId }, 'Redis not available; ingestion job queued in DB only');
       return;
     }
-    await q.add('ingest', data, { attempts: 3, backoff: { type: 'exponential', delay: 2000 } });
+    try {
+      await q.add('ingest', data, { attempts: 3, backoff: { type: 'exponential', delay: 2000 } });
+    } catch (err) {
+      // The IngestionJob row is already persisted in QUEUED state. Coping with
+      // a transient queue failure here must never fail the source creation —
+      // a reconcile/retry path can re-enqueue from the DB later.
+      logger.warn({ err, sourceId: data.sourceId }, 'Failed to enqueue ingestion job; job remains QUEUED in DB');
+    }
   },
 
   /**

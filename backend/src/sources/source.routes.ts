@@ -13,6 +13,35 @@ router.use(authenticate);
 // POST /sources — create a training source (standalone)
 router.post('/', validate(createSourceSchema), asyncHandler((req, res) => sourceController.createSource(req, res)));
 
+/**
+ * @openapi
+ * /sources:
+ *   post:
+ *     summary: Register a training source
+ *     tags: [Sources]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [alternateId, type, name]
+ *             properties:
+ *               alternateId: { type: string, format: uuid }
+ *               type: { type: string, enum: [FILE, URL, LINKEDIN, YOUTUBE, OTHER] }
+ *               name: { type: string }
+ *               url: { type: string }
+ *               fileName: { type: string }
+ *               mimeType: { type: string }
+ *               fileContent: { type: string, description: base64 file bytes (FILE sources) }
+ *     responses:
+ *       201: { description: Source created; ingestion job queued (status PENDING) }
+ *       400: { description: Validation error | UNSUPPORTED_FILE_TYPE | FILE_TOO_LARGE }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ */
+
 // GET /sources/alternates/:alternateId/sources — list sources for an alternate
 router.get('/alternates/:alternateId/sources', requireAlternateOwnership, asyncHandler((req, res) => sourceController.getSources(req, res)));
 

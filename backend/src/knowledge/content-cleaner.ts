@@ -26,7 +26,11 @@ function decodeEntities(html: string): string {
 
 /** Fix common UTF-8-read-as-Latin-1 mojibake sequences (e.g. "Ã©" → "é"). */
 function fixMojibake(text: string): string {
-  const pattern = /Ã[ÃÂ]/g;
+  // "Ã" (U+00C3) is the Latin-1 rendering of UTF-8 lead byte 0xC3. The next
+  // character in the unsuitable range [0x80..0xC2] represents the mojibaked
+  // continuation byte (0xA9 for "é", 0xC2 for "Â", ...). Real Latin-1 text
+  // like Portuguese "São" never contains "Ã" followed by such a character.
+  const pattern = /Ã[\u0080-\u00C2]/g;
   const charset = (text.match(pattern) || []).length;
   if (charset < 2) return text;
   try {
