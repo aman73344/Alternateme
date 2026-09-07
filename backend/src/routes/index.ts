@@ -7,6 +7,7 @@ import { publicRouter } from '@/alternates/public.routes';
 import { sourceRouter } from '@/sources/source.routes';
 import { voiceRouter } from '@/voice/voice.routes';
 import { providerRouter } from '@/ai-providers/provider.routes';
+import { chatRouter } from '@/chat/chat.routes';
 
 const router: import('express').Router = Router();
 
@@ -21,5 +22,6 @@ router.use('/public', publicRouter);
 router.use('/sources', sourceRouter);
 router.use('/voice', voiceRouter);
 router.use('/ai-providers', providerRouter);
+router.use('/alternates', chatRouter);
 
 export { router as apiRouter };
