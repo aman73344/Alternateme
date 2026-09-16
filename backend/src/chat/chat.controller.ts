@@ -161,6 +161,64 @@ export class ChatController {
       next(error);
     }
   }
+
+  /**
+   * POST /alternates/:alternateId/memory/debug
+   * Debug the Memory pipeline (development only).
+   */
+  async debugMemory(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { alternateId } = req.params;
+      const userId = req.authUser?.id;
+      const { query } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      if (!query || typeof query !== 'string') {
+        res.status(400).json({ error: 'Query is required' });
+        return;
+      }
+
+      if (process.env.NODE_ENV === 'production' && process.env.ENABLE_MEMORY_DEBUG !== 'true') {
+        res.status(403).json({ error: 'Memory debug endpoint disabled in production' });
+        return;
+      }
+
+      const { memoryRetrievalService } = await import('@/memory/memory.retrieval');
+      const memoryResult = await memoryRetrievalService.retrieve({
+        query,
+        alternateId,
+        userId,
+        limit: parseInt(process.env.MEMORY_TOP_K || '10', 10),
+        minScore: parseFloat(process.env.MEMORY_MIN_SCORE || '0.3'),
+        includePrivate: true,
+      });
+
+      res.status(200).json({
+        data: {
+          query,
+          resultCount: memoryResult.memories.length,
+          memories: memoryResult.memories.map((m) => ({
+            id: m.id,
+            type: m.type,
+            content: m.content,
+            importance: m.importance,
+            confidence: m.confidence,
+            sourceType: m.sourceType,
+            status: m.status,
+            similarity: (m as any).similarity ?? null,
+          })),
+          formattedContext: memoryResult.formattedContext,
+          tokenEstimate: memoryResult.tokenEstimate,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const chatController = new ChatController();

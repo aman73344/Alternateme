@@ -81,4 +81,14 @@ router.post(
   chatController.debugRag.bind(chatController)
 );
 
+/**
+ * POST /alternates/:alternateId/memory/debug
+ * Debug Memory pipeline (development only).
+ */
+router.post(
+  '/:alternateId/memory/debug',
+  requireAlternateOwnership,
+  chatController.debugMemory.bind(chatController),
+);
+
 export { router as chatRouter };

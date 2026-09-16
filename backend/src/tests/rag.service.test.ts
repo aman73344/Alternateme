@@ -29,7 +29,7 @@ describe('RAG Service', () => {
         email: `rag-test-${Date.now()}@test.com`,
         username: `ragtest${Date.now()}`,
         passwordHash: 'test-hash',
-        emailVerified: true,
+        emailVerified: new Date(),
       },
     });
     testUserId = testUser.id;
@@ -50,7 +50,7 @@ describe('RAG Service', () => {
         email: `rag-other-${Date.now()}@test.com`,
         username: `ragother${Date.now()}`,
         passwordHash: 'test-hash',
-        emailVerified: true,
+                emailVerified: new Date(),
       },
     });
     otherUserId = otherUser.id;

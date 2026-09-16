@@ -1,6 +1,6 @@
 /**
  * Chat Security Tests
- * 
+ *
  * Tests security aspects of the chat system:
  * - Unauthorized access prevention
  * - Cross-user data isolation
@@ -23,7 +23,7 @@ describe('Chat Security', () => {
         email: `chat-sec-${Date.now()}@test.com`,
         username: `chatsec${Date.now()}`,
         passwordHash: 'test-hash',
-        emailVerified: true,
+        emailVerified: new Date(),
       },
     });
     testUserId = testUser.id;
@@ -31,7 +31,7 @@ describe('Chat Security', () => {
     const testAlternate = await prisma.alternate.create({
       data: {
         userId: testUserId,
-        username: `chat-sec-${Date.now()}`,
+        username: `chat-sec-alt-${Date.now()}`,
         displayName: 'Security Test Alternate',
       },
     });
@@ -53,7 +53,7 @@ describe('Chat Security', () => {
         email: `chat-sec-other-${Date.now()}@test.com`,
         username: `chatsecother${Date.now()}`,
         passwordHash: 'test-hash',
-        emailVerified: true,
+        emailVerified: new Date(),
       },
     });
     otherUserId = otherUser.id;

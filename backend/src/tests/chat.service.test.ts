@@ -17,7 +17,7 @@ describe('Chat Service - Conversations', () => {
         email: `chat-test-${Date.now()}@test.com`,
         username: `chattest${Date.now()}`,
         passwordHash: 'test-hash',
-        emailVerified: true,
+        emailVerified: new Date(),
       },
     });
     testUserId = testUser.id;
@@ -36,7 +36,7 @@ describe('Chat Service - Conversations', () => {
         email: `chat-other-${Date.now()}@test.com`,
         username: `chatother${Date.now()}`,
         passwordHash: 'test-hash',
-        emailVerified: true,
+        emailVerified: new Date(),
       },
     });
     otherUserId = otherUser.id;

@@ -15,6 +15,10 @@ export enum QueueName {
   EMBEDDING_GENERATION = 'embedding-generation',
   KNOWLEDGE_CLEANUP = 'knowledge-cleanup',
   KNOWLEDGE_RETRY = 'knowledge-retry',
+  // Phase 5
+  MEMORY_EXTRACTION = 'memory-extraction',
+  MEMORY_EMBEDDING = 'memory-embedding',
+  MEMORY_CONVERSATION_SUMMARY = 'memory-conversation-summary',
 }
 
 // Completely lazy - no connection setup at module load time
@@ -90,6 +94,10 @@ export const documentProcessingQueue = () => getQueue(QueueName.DOCUMENT_PROCESS
 export const embeddingGenerationQueue = () => getQueue(QueueName.EMBEDDING_GENERATION);
 export const knowledgeCleanupQueue = () => getQueue(QueueName.KNOWLEDGE_CLEANUP);
 export const knowledgeRetryQueue = () => getQueue(QueueName.KNOWLEDGE_RETRY);
+// Phase 5
+export const memoryExtractionQueue = () => getQueue(QueueName.MEMORY_EXTRACTION);
+export const memoryEmbeddingQueue = () => getQueue(QueueName.MEMORY_EMBEDDING);
+export const memoryConversationSummaryQueue = () => getQueue(QueueName.MEMORY_CONVERSATION_SUMMARY);
 
 export async function closeAllQueues(): Promise<void> {
   const allQueues = Array.from(queues.values()).filter((q): q is Queue => q !== null);

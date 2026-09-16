@@ -8,6 +8,9 @@ import { createDocumentProcessingWorker } from './document-processing.worker';
 import { createEmbeddingGenerationWorker } from './embedding-generation.worker';
 import { createKnowledgeCleanupWorker } from './knowledge-cleanup.worker';
 import { createKnowledgeRetryWorker } from './knowledge-retry.worker';
+import { createMemoryExtractionWorker } from './memory-extraction.worker';
+import { createMemoryEmbeddingWorker } from './memory-embedding.worker';
+import { createConversationSummaryWorker } from './conversation-summary.worker';
 
 const connection: ConnectionOptions = {
   url: config.redis.url,
@@ -40,12 +43,16 @@ export async function startWorkers(): Promise<void> {
     createWorker(QueueName.VOICE, async () => {}),
     createWorker(QueueName.ANALYTICS, async () => {}),
     createWorker(QueueName.CLEANUP, async () => {}),
-    // Phase 3 knowledge pipeline workers
+        // Phase 3 knowledge pipeline workers
     createKnowledgeIngestionWorker(),
     createDocumentProcessingWorker(),
     createEmbeddingGenerationWorker(),
     createKnowledgeCleanupWorker(),
     createKnowledgeRetryWorker(),
+    // Phase 5 memory workers
+    createMemoryExtractionWorker(),
+    createMemoryEmbeddingWorker(),
+    createConversationSummaryWorker(),
   ];
 
   logger.info({ count: workers.length }, 'Workers started');

@@ -115,8 +115,26 @@ interface Config {
       maxDocumentSize: number;
       allowedMimeTypes: string[];
     };
-    retry: {
+        retry: {
       maxAttempts: number;
+    };
+  };
+  memory: {
+    enabled: boolean;
+    extraction: {
+      enabled: boolean;
+      model: string;
+      minConfidence: number;
+      batchSize: number;
+    };
+    retrieval: {
+      topK: number;
+      maxTokens: number;
+      minScore: number;
+    };
+    summarization: {
+      triggerTokens: number;
+      summaryModel: string;
     };
   };
 }
@@ -278,8 +296,27 @@ const config: Config = {
     retry: {
       maxAttempts: parseInt(process.env.INGESTION_MAX_RETRIES || '3', 10),
     },
+    },
+    memory: {
+    enabled: process.env.MEMORY_ENABLED !== 'false',
+    extraction: {
+      enabled: process.env.MEMORY_EXTRACTION_ENABLED !== 'false',
+      model: process.env.MEMORY_EXTRACTION_MODEL || 'gpt-4o-mini',
+      minConfidence: parseFloat(process.env.MEMORY_EXTRACTION_MIN_CONFIDENCE || '0.7'),
+      batchSize: parseInt(process.env.MEMORY_EXTRACTION_BATCH_SIZE || '10', 10),
+    },
+    retrieval: {
+      topK: parseInt(process.env.MEMORY_TOP_K || '10', 10),
+      maxTokens: parseInt(process.env.MEMORY_MAX_TOKENS || '2000', 10),
+      minScore: parseFloat(process.env.MEMORY_MIN_SCORE || '0.5'),
+    },
+    summarization: {
+      triggerTokens: parseInt(process.env.CONVERSATION_SUMMARY_TRIGGER_TOKENS || '4000', 10),
+      summaryModel: process.env.CONVERSATION_SUMMARY_MODEL || 'gpt-4o-mini',
+    },
   },
 };
 
 export { config };
+
 export type { Config };

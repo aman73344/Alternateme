@@ -78,9 +78,14 @@ export class VectorRepository {
       paramIndex++;
     }
 
-    conditions.push(`(1 - (e.vector <=> $${paramIndex}::vector)) >= $${paramIndex + 1}`);
-    queryParams.push(vectorStr, minSimilarity);
+        const vectorParam = `$${paramIndex}::vector`;
+    const thresholdParam = `$${paramIndex + 1}`;
     paramIndex += 2;
+
+    conditions.push(`(1 - (e.vector <=> ${vectorParam})) >= ${thresholdParam}`);
+    queryParams.push(vectorStr, minSimilarity);
+
+    const limitParam = `$${paramIndex}`;
     queryParams.push(topK);
 
     const whereClause = conditions.join(' AND ');
@@ -99,14 +104,14 @@ export class VectorRepository {
         kd."title" as "documentTitle",
         ts."url" as "sourceUrl",
         ts."name" as "sourceName",
-        (1 - (e.vector <=> $${paramIndex}::vector)) as similarity
+        (1 - (e.vector <=> ${vectorParam})) as similarity
       FROM "embeddings" e
       INNER JOIN "document_chunks" dc ON e."chunkId" = dc."id"
       INNER JOIN "knowledge_documents" kd ON e."documentId" = kd."id"
       INNER JOIN "training_sources" ts ON e."sourceId" = ts."id"
       WHERE ${whereClause}
-      ORDER BY e.vector <=> $${paramIndex}::vector ASC
-      LIMIT $${paramIndex + 1}
+      ORDER BY e.vector <=> ${vectorParam} ASC
+      LIMIT ${limitParam}
     `;
 
     try {

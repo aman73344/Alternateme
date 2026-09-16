@@ -1,0 +1,37 @@
+﻿src/chat/chat.controller.ts(155,43): error TS2339: Property 'debugRetrieval' does not exist on type 'ChatService'.
+src/chat/chat.service.ts(23,25): error TS2305: Module '"@/utils/errors"' has no exported member 'ForbiddenError'.
+src/chat/chat.service.ts(110,11): error TS6133: 'userMessage' is declared but its value is never read.
+src/chat/chat.service.ts(242,29): error TS2345: Argument of type 'Memory[]' is not assignable to parameter of type 'RankedMemory[]'.
+  Type 'Memory' is missing the following properties from type 'RankedMemory': memory, score, importanceScore, confidenceScore, and 2 more.
+src/memory/memory-embedding.repository.ts(20,7): error TS2353: Object literal may only specify known properties, and 'vector' does not exist in type '(Without<MemoryEmbeddingUpdateInput, MemoryEmbeddingUncheckedUpdateInput> & MemoryEmbeddingUncheckedUpdateInput) | (Without<...> & MemoryEmbeddingUpdateInput)'.
+src/memory/memory-embedding.repository.ts(29,7): error TS2353: Object literal may only specify known properties, and 'vector' does not exist in type 'Without<MemoryEmbeddingCreateInput, MemoryEmbeddingUncheckedCreateInput> & MemoryEmbeddingUncheckedCreateInput'.
+src/memory/memory-extraction-job.repository.ts(43,65): error TS6133: 'result' is declared but its value is never read.
+src/memory/memory.controller.ts(32,23): error TS7030: Not all code paths return a value.
+src/memory/memory.controller.ts(64,23): error TS7030: Not all code paths return a value.
+src/memory/memory.controller.ts(75,23): error TS7030: Not all code paths return a value.
+src/memory/memory.controller.ts(90,23): error TS7030: Not all code paths return a value.
+src/memory/memory.controller.ts(100,23): error TS7030: Not all code paths return a value.
+src/memory/memory.controller.ts(110,23): error TS7030: Not all code paths return a value.
+src/memory/memory.controller.ts(120,23): error TS7030: Not all code paths return a value.
+src/memory/memory.extraction.ts(6,10): error TS2305: Module '"@/ai-providers/provider.service"' has no exported member 'AIProvider'.
+src/memory/memory.extraction.ts(7,27): error TS6133: 'MemoryVisibility' is declared but its value is never read.
+src/memory/memory.extraction.ts(9,1): error TS6133: 'MEMORY_EXTRACTION_JOB_DATA_SCHEMA' is declared but its value is never read.
+src/memory/memory.extraction.ts(80,68): error TS6133: 'conversationId' is declared but its value is never read.
+src/memory/memory.extraction.ts(96,63): error TS2554: Expected 2 arguments, but got 3.
+src/memory/memory.repository.search.ts(9,3): error TS6133: 'MemoryVisibility' is declared but its value is never read.
+src/memory/memory.repository.search.ts(14,1): error TS6133: 'MEMORY_DEFAULTS' is declared but its value is never read.
+src/memory/memory.repository.ts(16,1): error TS6133: 'NotFoundError' is declared but its value is never read.
+src/memory/memory.repository.vector.ts(12,3): error TS6133: 'MemoryStatus' is declared but its value is never read.
+src/memory/memory.retrieval.ts(13,10): error TS2305: Module '"@/config"' has no exported member 'getEmbeddingService'.
+src/memory/memory.retrieval.ts(20,28): error TS6133: 'findSemanticDuplicates' is declared but its value is never read.
+src/memory/memory.retrieval.ts(23,24): error TS6133: 'RankedMemory' is declared but its value is never read.
+src/memory/memory.retrieval.ts(166,31): error TS2552: Cannot find name 'embeddingService'. Did you mean 'getEmbeddingService'?
+src/memory/memory.schema.ts(6,1): error TS6192: All imports in import declaration are unused.
+src/memory/memory.service.ts(15,3): error TS6133: 'CreateMemoryInput' is declared but its value is never read.
+src/memory/memory.service.ts(17,3): error TS6133: 'MemorySearchParams' is declared but its value is never read.
+src/memory/memory.service.ts(18,3): error TS6133: 'MemoryRetrievalResult' is declared but its value is never read.
+src/memory/memory.service.ts(21,3): error TS6133: 'MemoryVisibility' is declared but its value is never read.
+src/memory/memory.service.ts(22,3): error TS6133: 'MemorySourceType' is declared but its value is never read.
+src/memory/memory.service.ts(31,3): error TS6133: 'supersedeMemory' is declared but its value is never read.
+src/workers/conversation-summary.worker.ts(13,10): error TS2305: Module '"@/ai-providers/provider.service"' has no exported member 'AIProvider'.
+src/workers/memory-embedding.worker.ts(12,10): error TS2305: Module '"@/config"' has no exported member 'getEmbeddingService'.

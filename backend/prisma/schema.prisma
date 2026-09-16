@@ -1,19 +1,915 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch"]
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
-  // pgvector, citext, and uuid-ossp extensions are expected but not required here
-  // They will be installed manually if needed
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ===========================================================================
-// ENUMS
-// ===========================================================================
+model User {
+  id                    String                @id @default(uuid()) @db.Uuid
+  tenantId              String?               @db.Uuid
+  username              String                @unique
+  email                 String                @unique
+  emailVerified         DateTime?
+  name                  String?
+  avatarUrl             String?
+  role                  UserRole              @default(USER)
+  passwordHash          String?
+  isMfaEnabled          Boolean               @default(false)
+  mfaSecret             String?
+  bio                   String?
+  timezone              String?               @default("UTC")
+  language              String?               @default("en")
+  theme                 String?               @default("light")
+  lastLoginAt           DateTime?
+  isActive              Boolean               @default(true)
+  deletedAt             DateTime?
+  metadata              Json?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  aiProviderConfigs     AIProviderConfig[]
+  alternates            Alternate[]
+  analytics             AnalyticEvent[]
+  apiKeys               ApiKey[]
+  auditLogs             AuditLog[]
+  callRecords           CallRecord[]
+  conversationSummaries ConversationSummary[]
+  conversations         Conversation[]
+  documentChunks        DocumentChunk[]       @relation("DocumentChunkUser")
+  emailThreads          EmailThread[]
+  embeddings            Embedding[]           @relation("EmbeddingUser")
+  knowledgeJobs         IngestionJob[]        @relation("IngestionJobUser")
+  knowledgeDocuments    KnowledgeDocument[]   @relation("KnowledgeDocumentUser")
+  knowledgeVersions     KnowledgeVersion[]    @relation("KnowledgeVersionUser")
+  memories              Memory[]
+  memoryEmbeddings      MemoryEmbedding[]
+  memoryExtractionJobs  MemoryExtractionJob[]
+  oauthAccounts         OAuthAccount[]
+  onboardings           Onboarding[]
+  passwordResetTokens   PasswordResetToken[]
+  personas              Persona[]
+  refreshTokens         RefreshToken[]
+  sessions              Session[]
+  subscriptions         Subscription[]
+  trainingJobs          TrainingJob[]
+  trainingSources       TrainingSource[]
+  usageRecords          UsageRecord[]
+  preferences           UserPreference?
+  tenant                Tenant?               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  verificationTokens    VerificationToken[]
+  voiceProfiles         VoiceProfile[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([tenantId])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Tenant {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String     @unique
+  domain    String?    @unique
+  metadata  Json?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  auditLogs AuditLog[]
+  sessions  Session[]
+  users     User[]
+
+  @@index([slug])
+  @@map("tenants")
+}
+
+model UserPreference {
+  id                      String   @id @default(uuid()) @db.Uuid
+  userId                  String   @unique @db.Uuid
+  timezone                String   @default("UTC")
+  language                String   @default("en")
+  theme                   String   @default("light")
+  notificationPreferences Json?    @default("{}")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([timezone])
+  @@index([language])
+  @@index([theme])
+  @@map("user_preferences")
+}
+
+model Session {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  tenantId       String?        @db.Uuid
+  device         String?
+  browser        String?
+  os             String?
+  ipAddress      String?
+  country        String?
+  city           String?
+  userAgent      String?
+  createdAt      DateTime       @default(now())
+  lastActivityAt DateTime       @default(now())
+  expiresAt      DateTime
+  isActive       Boolean        @default(true)
+  revokedAt      DateTime?
+  refreshTokens  RefreshToken[]
+  tenant         Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @db.Uuid
+  sessionId       String        @db.Uuid
+  tokenHash       String        @unique
+  rotatedFromId   String?       @unique @db.Uuid
+  replacedByToken String?
+  revokedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  expiresAt       DateTime
+  ipAddress       String?
+  userAgent       String?
+  fingerprint     String?
+  lastUsedAt      DateTime?
+  isActive        Boolean       @default(true)
+  previous        RefreshToken? @relation("TokenRotation", fields: [rotatedFromId], references: [id])
+  next            RefreshToken? @relation("TokenRotation")
+  session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @db.Uuid
+  provider          OAuthProvider
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  scope             String?
+  expiresAt         DateTime?
+  tokenType         String?
+  idToken           String?
+  profile           Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([provider])
+  @@map("oauth_accounts")
+}
+
+model Alternate {
+  id                    String                @id @default(uuid()) @db.Uuid
+  userId                String                @db.Uuid
+  username              String                @unique
+  displayName           String
+  title                 String?
+  bio                   String?
+  avatarUrl             String?
+  visibility            AlternateVisibility   @default(PRIVATE)
+  status                AlternateStatus       @default(DRAFT)
+  personaPrompt         String?
+  modelId               String?
+  publishedAt           DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
+  memoryEnabled         Boolean               @default(false)
+  aiProvider            AIProviderConfig?
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  callRecords           CallRecord[]
+  chunks                ContentChunk[]
+  conversationSummaries ConversationSummary[]
+  conversations         Conversation[]
+  documentChunks        DocumentChunk[]       @relation("DocumentChunkAlternate")
+  emailThreads          EmailThread[]
+  embeddings            Embedding[]           @relation("EmbeddingAlternate")
+  knowledgeJobs         IngestionJob[]        @relation("IngestionJobAlternate")
+  knowledgeDocuments    KnowledgeDocument[]   @relation("KnowledgeDocumentAlternate")
+  knowledgeVersions     KnowledgeVersion[]    @relation("KnowledgeVersionAlternate")
+  memories              Memory[]
+  memoryEmbeddings      MemoryEmbedding[]
+  memoryExtractionJobs  MemoryExtractionJob[]
+  onboarding            Onboarding?
+  persona               Persona?
+  trainingJobs          TrainingJob[]
+  sources               TrainingSource[]
+  voiceProfile          VoiceProfile?
+
+  @@index([userId])
+  @@index([username])
+  @@index([status])
+  @@index([visibility])
+  @@index([deletedAt])
+  @@map("alternates")
+}
+
+model Onboarding {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @db.Uuid
+  alternateId    String           @unique @db.Uuid
+  currentStep    OnboardingStep
+  completedSteps OnboardingStep[]
+  status         OnboardingStatus @default(NOT_STARTED)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  alternate      Alternate        @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([status])
+  @@map("onboardings")
+}
+
+model Persona {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
+  alternateId     String    @unique @db.Uuid
+  tone            String?
+  writingStyle    String?
+  personality     String?
+  instructions    String?
+  boundaries      String?
+  refusalBehavior String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  alternate       Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@map("personas")
+}
+
+model TrainingSource {
+  id                String              @id @default(uuid()) @db.Uuid
+  alternateId       String              @db.Uuid
+  userId            String              @db.Uuid
+  type              SourceType
+  origin            String?
+  name              String
+  url               String?
+  fileName          String?
+  mimeType          String?
+  fileSize          Int?
+  status            SourceStatus        @default(PENDING)
+  wordCount         Int?
+  errorMessage      String?
+  lastSyncedAt      DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  checksum          String?
+  chunkCount        Int                 @default(0)
+  currentVersion    Int                 @default(0)
+  documentCount     Int                 @default(0)
+  errorCode         String?
+  failedAt          DateTime?
+  lastProcessedAt   DateTime?
+  processedAt       DateTime?
+  processingStage   String?
+  storageBucket     String?
+  storageKey        String?
+  storageUrl        String?
+  chunks            ContentChunk[]
+  documentChunks    DocumentChunk[]     @relation("DocumentChunkSource")
+  embeddings        Embedding[]         @relation("EmbeddingSource")
+  ingestionJobs     IngestionJob[]      @relation("IngestionJobSource")
+  documents         KnowledgeDocument[] @relation("KnowledgeDocumentSource")
+  knowledgeVersions KnowledgeVersion[]  @relation("KnowledgeVersionSource")
+  alternate         Alternate           @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([alternateId])
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@map("training_sources")
+}
+
+model ContentChunk {
+  id          String         @id @default(uuid()) @db.Uuid
+  alternateId String         @db.Uuid
+  sourceId    String         @db.Uuid
+  index       Int
+  content     String
+  metadata    Json?
+  tokenCount  Int?
+  embeddingId String?
+  createdAt   DateTime       @default(now())
+  alternate   Alternate      @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  source      TrainingSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([alternateId])
+  @@index([sourceId])
+  @@map("content_chunks")
+}
+
+model TrainingJob {
+  id             String         @id @default(uuid()) @db.Uuid
+  alternateId    String         @db.Uuid
+  userId         String         @db.Uuid
+  status         TrainingStatus @default(QUEUED)
+  progress       Int            @default(0)
+  totalItems     Int            @default(0)
+  processedItems Int            @default(0)
+  errorMessage   String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  alternate      Alternate      @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([alternateId])
+  @@index([userId])
+  @@index([status])
+  @@map("training_jobs")
+}
+
+model KnowledgeDocument {
+  id               String            @id @default(uuid()) @db.Uuid
+  userId           String            @db.Uuid
+  alternateId      String            @db.Uuid
+  sourceId         String            @db.Uuid
+  title            String
+  mimeType         String?
+  language         String            @default("en")
+  characterCount   Int               @default(0)
+  wordCount        Int               @default(0)
+  pageCount        Int               @default(0)
+  checksum         String?
+  version          Int               @default(0)
+  status           DocumentStatus    @default(PENDING)
+  processedAt      DateTime?
+  failedAt         DateTime?
+  errorCode        String?
+  errorMessage     String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  chunks           DocumentChunk[]   @relation("DocumentChunkDocument")
+  embeddings       Embedding[]       @relation("EmbeddingDocument")
+  ingestionJobs    IngestionJob[]    @relation("IngestionJobDocument")
+  alternate        Alternate         @relation("KnowledgeDocumentAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  source           TrainingSource    @relation("KnowledgeDocumentSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  user             User              @relation("KnowledgeDocumentUser", fields: [userId], references: [id], onDelete: Cascade)
+  knowledgeVersion KnowledgeVersion? @relation("KnowledgeVersionDocument")
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([version])
+  @@index([status])
+  @@map("knowledge_documents")
+}
+
+model DocumentChunk {
+  id             String            @id @default(uuid()) @db.Uuid
+  userId         String            @db.Uuid
+  alternateId    String            @db.Uuid
+  sourceId       String            @db.Uuid
+  documentId     String            @db.Uuid
+  version        Int               @default(0)
+  chunkIndex     Int
+  content        String
+  tokenCount     Int               @default(0)
+  characterCount Int               @default(0)
+  heading        String?
+  metadata       Json?
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  alternate      Alternate         @relation("DocumentChunkAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  document       KnowledgeDocument @relation("DocumentChunkDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  source         TrainingSource    @relation("DocumentChunkSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  user           User              @relation("DocumentChunkUser", fields: [userId], references: [id], onDelete: Cascade)
+  embeddings     Embedding[]       @relation("EmbeddingChunk")
+
+  @@unique([sourceId, version, chunkIndex])
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([documentId])
+  @@index([version])
+  @@index([isActive])
+  @@map("document_chunks")
+}
+
+model Embedding {
+  id              String                 @id @default(uuid()) @db.Uuid
+  userId          String                 @db.Uuid
+  alternateId     String                 @db.Uuid
+  sourceId        String                 @db.Uuid
+  documentId      String                 @db.Uuid
+  chunkId         String                 @db.Uuid
+  version         Int                    @default(0)
+  model           String
+  modelDimensions Int                    @default(1536)
+  tokenCount      Int?
+  vector          Unsupported("vector")?
+  createdAt       DateTime               @default(now())
+  alternate       Alternate              @relation("EmbeddingAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  chunk           DocumentChunk          @relation("EmbeddingChunk", fields: [chunkId], references: [id], onDelete: Cascade)
+  document        KnowledgeDocument      @relation("EmbeddingDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  source          TrainingSource         @relation("EmbeddingSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  user            User                   @relation("EmbeddingUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([documentId])
+  @@index([chunkId])
+  @@index([version])
+  @@map("embeddings")
+}
+
+model IngestionJob {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @db.Uuid
+  alternateId  String             @db.Uuid
+  sourceId     String             @db.Uuid
+  documentId   String?            @db.Uuid
+  version      Int                @default(0)
+  type         String             @default("INGEST")
+  status       IngestionStage     @default(QUEUED)
+  stage        String?
+  attempts     Int                @default(0)
+  maxAttempts  Int                @default(3)
+  progress     Int                @default(0)
+  isRetryable  Boolean            @default(false)
+  errorCode    String?
+  errorMessage String?
+  payload      Json?
+  result       Json?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  failedAt     DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  alternate    Alternate          @relation("IngestionJobAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  document     KnowledgeDocument? @relation("IngestionJobDocument", fields: [documentId], references: [id])
+  source       TrainingSource     @relation("IngestionJobSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  user         User               @relation("IngestionJobUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([sourceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("ingestion_jobs")
+}
+
+model KnowledgeVersion {
+  id           String                 @id @default(uuid()) @db.Uuid
+  userId       String                 @db.Uuid
+  alternateId  String                 @db.Uuid
+  sourceId     String                 @db.Uuid
+  documentId   String                 @unique @db.Uuid
+  version      Int
+  status       KnowledgeVersionStatus @default(PENDING)
+  chunkCount   Int                    @default(0)
+  checksum     String?
+  createdAt    DateTime               @default(now())
+  supersededAt DateTime?
+  alternate    Alternate              @relation("KnowledgeVersionAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
+  document     KnowledgeDocument      @relation("KnowledgeVersionDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  source       TrainingSource         @relation("KnowledgeVersionSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  user         User                   @relation("KnowledgeVersionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, version])
+  @@index([userId])
+  @@index([alternateId])
+  @@index([status])
+  @@map("knowledge_versions")
+}
+
+model VoiceProfile {
+  id               String        @id @default(uuid()) @db.Uuid
+  userId           String        @db.Uuid
+  alternateId      String        @unique @db.Uuid
+  provider         VoiceProvider
+  voiceId          String
+  name             String
+  type             VoiceType
+  consentGiven     Boolean       @default(false)
+  consentTimestamp DateTime?
+  status           VoiceStatus   @default(PENDING)
+  settings         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  alternate        Alternate     @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@map("voice_profiles")
+}
+
+model AIProviderConfig {
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String     @db.Uuid
+  alternateId     String     @unique @db.Uuid
+  provider        AIProvider
+  encryptedApiKey String
+  keyLabel        String?
+  status          String     @default("PENDING")
+  defaultModel    String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  lastValidatedAt DateTime?
+  alternate       Alternate  @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([alternateId])
+  @@index([provider])
+  @@map("ai_provider_configs")
+}
+
+model Conversation {
+  id             String                @id @default(uuid()) @db.Uuid
+  alternateId    String                @db.Uuid
+  userId         String                @db.Uuid
+  channel        ConversationChannel   @default(CHAT)
+  title          String?
+  sessionId      String?
+  metadata       Json?
+  messageCount   Int                   @default(0)
+  isActive       Boolean               @default(true)
+  satisfaction   Int?
+  feedback       String?
+  startedAt      DateTime              @default(now())
+  endedAt        DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  summaries      ConversationSummary?
+  alternate      Alternate             @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  extractionJobs MemoryExtractionJob[]
+  messages       Message[]
+
+  @@index([alternateId])
+  @@index([userId])
+  @@index([channel])
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String                @id @default(uuid()) @db.Uuid
+  conversationId String                @db.Uuid
+  role           MessageRole
+  content        String
+  tokensUsed     Int?
+  modelUsed      String?
+  latencyMs      Int?
+  metadata       Json?
+  sources        Json?
+  createdAt      DateTime              @default(now())
+  extractionJobs MemoryExtractionJob[]
+  conversation   Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model EmailThread {
+  id             String         @id @default(uuid()) @db.Uuid
+  alternateId    String         @db.Uuid
+  userId         String         @db.Uuid
+  subject        String
+  fromEmail      String
+  toEmail        String
+  threadId       String?
+  direction      EmailDirection @default(INBOUND)
+  status         EmailStatus    @default(SENT)
+  messageCount   Int            @default(0)
+  lastActivityAt DateTime?
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  messages       EmailMessage[]
+  alternate      Alternate      @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([alternateId])
+  @@index([userId])
+  @@index([threadId])
+  @@map("email_threads")
+}
+
+model EmailMessage {
+  id        String      @id @default(uuid()) @db.Uuid
+  threadId  String      @db.Uuid
+  messageId String?
+  fromEmail String
+  toEmail   String
+  subject   String
+  body      String
+  bodyHtml  String?
+  status    EmailStatus @default(SENT)
+  metadata  Json?
+  sentAt    DateTime?
+  createdAt DateTime    @default(now())
+  thread    EmailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@map("email_messages")
+}
+
+model CallRecord {
+  id            String     @id @default(uuid()) @db.Uuid
+  alternateId   String     @db.Uuid
+  userId        String     @db.Uuid
+  twilioCallSid String?    @unique
+  fromNumber    String
+  toNumber      String
+  direction     String
+  status        CallStatus @default(INITIATED)
+  duration      Int?
+  cost          Decimal?   @db.Decimal(10, 4)
+  recordingUrl  String?
+  transcription String?
+  metadata      Json?
+  startedAt     DateTime?
+  endedAt       DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  alternate     Alternate  @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([alternateId])
+  @@index([userId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("call_records")
+}
+
+model AnalyticEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  event      String
+  properties Json?
+  sessionId  String?
+  timestamp  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([event])
+  @@index([timestamp])
+  @@map("analytic_events")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tenantId  String?  @db.Uuid
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model ApiKey {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @db.Uuid
+  name       String
+  keyPrefix  String
+  keyHash    String     @unique
+  type       ApiKeyType @default(PRIVATE)
+  scopes     Json?
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  isRevoked  Boolean    @default(false)
+  revokedAt  DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([isRevoked])
+  @@map("api_keys")
+}
+
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @db.Uuid
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  tier                 SubscriptionTier   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  trialEndsAt          DateTime?
+  canceledAt           DateTime?
+  metadata             Json?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records              UsageRecord[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([tier])
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @db.Uuid
+  subscriptionId String?       @db.Uuid
+  feature        String
+  quantity       Int           @default(1)
+  unit           String        @default("count")
+  metadata       Json?
+  recordedAt     DateTime      @default(now())
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([feature])
+  @@index([recordedAt])
+  @@map("usage_records")
+}
+
+model Memory {
+  id                   String           @id @default(uuid()) @db.Uuid
+  alternateId          String           @db.Uuid
+  userId               String           @db.Uuid
+  type                 String
+  content              String
+  normalizedContent    String
+  sourceType           String           @default("EXPLICIT")
+  importance           Float            @default(0.5)
+  confidence           Float            @default(0.5)
+  sourceConversationId String?          @db.Uuid
+  sourceMessageId      String?          @db.Uuid
+  status               String           @default("ACTIVE")
+  visibility           String           @default("PRIVATE")
+  isExtracted          Boolean          @default(false)
+  expiresAt            DateTime?
+  lastAccessedAt       DateTime         @default(now())
+  lastReinforcedAt     DateTime         @default(now())
+  reinforcementCount   Int              @default(0)
+  supersededById       String?          @unique @db.Uuid
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  alternate            Alternate        @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  supersededBy         Memory?          @relation("MemorySupersession", fields: [supersededById], references: [id])
+  superseded           Memory?          @relation("MemorySupersession")
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  embedding            MemoryEmbedding?
+
+  @@index([alternateId])
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([importance])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([expiresAt])
+  @@index([lastAccessedAt])
+  @@index([normalizedContent])
+  @@index([sourceConversationId])
+  @@index([sourceMessageId])
+  @@map("memories")
+}
+
+model MemoryEmbedding {
+  id          String                 @id @default(uuid()) @db.Uuid
+  memoryId    String                 @unique @db.Uuid
+  alternateId String                 @db.Uuid
+  userId      String                 @db.Uuid
+  vector      Unsupported("vector")?
+  model       String                 @default("text-embedding-3-small")
+  dimensions  Int                    @default(1536)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  alternate   Alternate              @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  memory      Memory                 @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([memoryId])
+  @@index([alternateId])
+  @@index([userId])
+  @@map("memory_embeddings")
+}
+
+model ConversationSummary {
+  id                String       @id @default(uuid()) @db.Uuid
+  conversationId    String       @unique @db.Uuid
+  alternateId       String       @db.Uuid
+  userId            String       @db.Uuid
+  summary           String
+  messageRangeStart Int
+  messageRangeEnd   Int
+  tokenCount        Int
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  alternate         Alternate    @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([alternateId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("conversation_summaries")
+}
+
+model MemoryExtractionJob {
+  id             String       @id @default(uuid()) @db.Uuid
+  alternateId    String       @db.Uuid
+  userId         String       @db.Uuid
+  messageId      String       @db.Uuid
+  conversationId String       @db.Uuid
+  status         String       @default("QUEUED")
+  attempts       Int          @default(0)
+  maxAttempts    Int          @default(3)
+  errorMessage   String?
+  extractedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  alternate      Alternate    @relation(fields: [alternateId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message        Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([alternateId])
+  @@index([userId])
+  @@index([status])
+  @@index([messageId])
+  @@index([createdAt])
+  @@map("memory_extraction_jobs")
+}
 
 enum UserRole {
   USER
@@ -66,7 +962,6 @@ enum SourceStatus {
   DELETED
 }
 
-// Phase 3 — per-job/stage state for the knowledge ingestion pipeline
 enum IngestionStage {
   QUEUED
   PROCESSING
@@ -201,890 +1096,7 @@ enum AuditAction {
   ALTERNATE_PUBLISHED
 }
 
-// ===========================================================================
-// CORE TABLES
-// ===========================================================================
-
-model User {
-  id                 String   @id @default(uuid()) @db.Uuid
-  tenantId           String?  @db.Uuid
-  username           String   @unique
-  email              String   @unique
-  emailVerified      DateTime?
-  name               String?
-  avatarUrl          String?
-  role               UserRole @default(USER)
-  passwordHash       String?
-  isMfaEnabled       Boolean  @default(false)
-  mfaSecret          String?
-  bio                String?
-  timezone           String?  @default("UTC")
-  language           String?  @default("en")
-  theme              String?  @default("light")
-  lastLoginAt        DateTime?
-  isActive           Boolean  @default(true)
-  deletedAt          DateTime?
-  metadata           Json?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  tenant             Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  preferences        UserPreference?
-  sessions           Session[]
-  refreshTokens      RefreshToken[]
-  verificationTokens VerificationToken[]
-  passwordResetTokens PasswordResetToken[]
-  oauthAccounts      OAuthAccount[]
-  alternates         Alternate[]
-  apiKeys            ApiKey[]
-  subscriptions      Subscription[]
-  conversations      Conversation[]
-  usageRecords       UsageRecord[]
-  voiceProfiles      VoiceProfile[]
-  trainingJobs       TrainingJob[]
-  emailThreads       EmailThread[]
-  callRecords        CallRecord[]
-  analytics          AnalyticEvent[]
-  auditLogs          AuditLog[]
-  trainingSources    TrainingSource[]
-  onboardings        Onboarding[]
-  personas           Persona[]
-  aiProviderConfigs  AIProviderConfig[]
-  knowledgeDocuments    KnowledgeDocument[] @relation("KnowledgeDocumentUser")
-  documentChunks        DocumentChunk[]     @relation("DocumentChunkUser")
-  embeddings            Embedding[]         @relation("EmbeddingUser")
-  knowledgeJobs         IngestionJob[]      @relation("IngestionJobUser")
-  knowledgeVersions     KnowledgeVersion[]  @relation("KnowledgeVersionUser")
-
-  @@index([email])
-  @@index([username])
-  @@index([role])
-  @@index([tenantId])
-  @@index([deletedAt])
-  @@map("users")
-}
-
-model Tenant {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String   @unique
-  domain    String?  @unique
-  metadata  Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users    User[]
-  sessions Session[]
-  auditLogs AuditLog[]
-
-  @@index([slug])
-  @@map("tenants")
-}
-
-model UserPreference {
-  id                     String   @id @default(uuid()) @db.Uuid
-  userId                 String   @unique @db.Uuid
-  timezone               String   @default("UTC")
-  language               String   @default("en")
-  theme                  String   @default("light")
-  notificationPreferences Json?    @default("{}")
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([timezone])
-  @@index([language])
-  @@index([theme])
-  @@map("user_preferences")
-}
-
 enum OAuthProvider {
   GOOGLE
   GITHUB
-}
-
-model Session {
-  id            String   @id @default(uuid()) @db.Uuid
-  userId        String   @db.Uuid
-  tenantId      String?  @db.Uuid
-  device        String?
-  browser       String?
-  os            String?
-  ipAddress     String?
-  country       String?
-  city          String?
-  userAgent     String?
-  createdAt     DateTime @default(now())
-  lastActivityAt DateTime @default(now())
-  expiresAt     DateTime
-  isActive      Boolean  @default(true)
-  revokedAt     DateTime?
-
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  refreshTokens RefreshToken[]
-
-  @@index([userId])
-  @@index([tenantId])
-  @@index([isActive])
-  @@index([expiresAt])
-  @@map("sessions")
-}
-
-model RefreshToken {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  sessionId       String   @db.Uuid
-  tokenHash       String   @unique
-  rotatedFromId   String?  @unique @db.Uuid
-  replacedByToken String?
-  revokedAt       DateTime?
-  createdAt       DateTime @default(now())
-  expiresAt       DateTime
-  ipAddress       String?
-  userAgent       String?
-  fingerprint     String?
-  lastUsedAt      DateTime?
-  isActive        Boolean  @default(true)
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  previous RefreshToken? @relation("TokenRotation", fields: [rotatedFromId], references: [id])
-  next     RefreshToken? @relation("TokenRotation")
-
-  @@index([userId])
-  @@index([sessionId])
-  @@index([expiresAt])
-  @@map("refresh_tokens")
-}
-
-model VerificationToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@map("verification_tokens")
-}
-
-model PasswordResetToken {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  tokenHash   String   @unique
-  expiresAt   DateTime
-  consumedAt  DateTime?
-  createdAt   DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@map("password_reset_tokens")
-}
-
-model OAuthAccount {
-  id                String        @id @default(uuid()) @db.Uuid
-  userId            String        @db.Uuid
-  provider          OAuthProvider
-  providerAccountId String
-  accessToken       String?
-  refreshToken      String?
-  scope             String?
-  expiresAt         DateTime?
-  tokenType         String?
-  idToken           String?
-  profile           Json?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-  @@index([provider])
-  @@map("oauth_accounts")
-}
-
-// ===========================================================================
-// ALTERNATES
-// ===========================================================================
-
-model Alternate {
-  id               String              @id @default(uuid()) @db.Uuid
-  userId           String              @db.Uuid
-  username         String              @unique
-  displayName      String
-  title            String?
-  bio              String?
-  avatarUrl        String?
-  visibility       AlternateVisibility @default(PRIVATE)
-  status           AlternateStatus     @default(DRAFT)
-  personaPrompt    String?
-  modelId          String?
-  publishedAt      DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  deletedAt        DateTime?
-
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  onboarding    Onboarding?
-  persona       Persona?
-  sources       TrainingSource[]
-  voiceProfile  VoiceProfile?
-  aiProvider    AIProviderConfig?
-  conversations Conversation[]
-  trainingJobs  TrainingJob[]
-  emailThreads  EmailThread[]
-  callRecords   CallRecord[]
-  chunks        ContentChunk[]
-  knowledgeDocuments KnowledgeDocument[] @relation("KnowledgeDocumentAlternate")
-  documentChunks     DocumentChunk[]     @relation("DocumentChunkAlternate")
-  embeddings         Embedding[]         @relation("EmbeddingAlternate")
-  knowledgeJobs      IngestionJob[]      @relation("IngestionJobAlternate")
-  knowledgeVersions  KnowledgeVersion[]  @relation("KnowledgeVersionAlternate")
-
-  @@index([userId])
-  @@index([username])
-  @@index([status])
-  @@index([visibility])
-  @@index([deletedAt])
-  @@map("alternates")
-}
-
-// ===========================================================================
-// ONBOARDING
-// ===========================================================================
-
-model Onboarding {
-  id             String           @id @default(uuid()) @db.Uuid
-  userId         String           @db.Uuid
-  alternateId    String           @unique @db.Uuid
-  currentStep    OnboardingStep
-  completedSteps OnboardingStep[]
-  status         OnboardingStatus @default(NOT_STARTED)
-  startedAt      DateTime?
-  completedAt    DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([alternateId])
-  @@index([status])
-  @@map("onboardings")
-}
-
-// ===========================================================================
-// PERSONA
-// ===========================================================================
-
-model Persona {
-  id              String    @id @default(uuid()) @db.Uuid
-  userId          String    @db.Uuid
-  alternateId     String    @unique @db.Uuid
-  tone            String?
-  writingStyle    String?
-  personality     String?
-  instructions    String?   @db.Text
-  boundaries      String?   @db.Text
-  refusalBehavior String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([alternateId])
-  @@map("personas")
-}
-
-// ===========================================================================
-// TRAINING & KNOWLEDGE
-// ===========================================================================
-
-model TrainingSource {
-  id              String       @id @default(uuid()) @db.Uuid
-  alternateId     String       @db.Uuid
-  userId          String       @db.Uuid
-  type            SourceType
-  origin          String?
-  name            String
-  url             String?
-  fileName        String?
-  mimeType        String?
-  fileSize        Int?
-  status          SourceStatus @default(PENDING)
-
-  // Phase 3 — object storage + ingestion bookkeeping
-  storageKey      String?
-  storageBucket   String?
-  storageUrl      String?
-  checksum        String?
-  currentVersion  Int          @default(0)
-  processingStage String?
-  chunkCount      Int          @default(0)
-  documentCount   Int          @default(0)
-  wordCount       Int?
-  errorCode       String?
-  errorMessage    String?
-  lastSyncedAt    DateTime?
-  lastProcessedAt DateTime?
-  processedAt     DateTime?
-  failedAt        DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  alternate        Alternate          @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chunks           ContentChunk[]
-  documents        KnowledgeDocument[] @relation("KnowledgeDocumentSource")
-  documentChunks   DocumentChunk[]     @relation("DocumentChunkSource")
-  ingestionJobs    IngestionJob[]      @relation("IngestionJobSource")
-  knowledgeVersions KnowledgeVersion[] @relation("KnowledgeVersionSource")
-  embeddings       Embedding[]         @relation("EmbeddingSource")
-
-  @@index([alternateId])
-  @@index([userId])
-  @@index([type])
-  @@index([status])
-  @@map("training_sources")
-}
-
-model ContentChunk {
-  id              String         @id @default(uuid()) @db.Uuid
-  alternateId     String         @db.Uuid
-  sourceId        String         @db.Uuid
-  index           Int
-  content         String         @db.Text
-  metadata        Json?
-  tokenCount      Int?
-  // Embeddings stored externally (e.g., Pinecone, or pgvector extension installed manually)
-  embeddingId     String?
-  createdAt       DateTime       @default(now())
-
-  alternate Alternate      @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-  source    TrainingSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-
-  @@index([alternateId])
-  @@index([sourceId])
-  @@map("content_chunks")
-}
-
-model TrainingJob {
-  id            String         @id @default(uuid()) @db.Uuid
-  alternateId   String         @db.Uuid
-  userId        String         @db.Uuid
-  status        TrainingStatus @default(QUEUED)
-  progress      Int            @default(0)
-  totalItems    Int            @default(0)
-  processedItems Int           @default(0)
-  errorMessage  String?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  metadata      Json?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([alternateId])
-  @@index([userId])
-  @@index([status])
-  @@map("training_jobs")
-}
-// ===========================================================================
-// PHASE 3 — KNOWLEDGE INGESTION & PROCESSING
-//
-// A TrainingSource owns zero..n KnowledgeDocuments. Each KnowledgeDocument
-// represents ONE extraction + cleaning pass of the source at a given version.
-// DocumentChunk stores cleaned, chunked content. Embedding stores the pgvector
-// vector for a chunk/model. IngestionJob tracks one async processing run.
-// KnowledgeVersion tracks the version chain (only ACTIVE is retrieval eligible).
-// ===========================================================================
-
-model KnowledgeDocument {
-  id             String         @id @default(uuid()) @db.Uuid
-  userId         String         @db.Uuid
-  alternateId    String         @db.Uuid
-  sourceId       String         @db.Uuid
-  title          String
-  mimeType       String?
-  language       String         @default("en")
-  characterCount Int            @default(0)
-  wordCount      Int            @default(0)
-  pageCount      Int            @default(0)
-  checksum       String? // sha-256 of the normalized content for idempotency
-  version        Int            @default(0)
-  status         DocumentStatus @default(PENDING)
-  processedAt    DateTime?
-  failedAt       DateTime?
-  errorCode      String?
-  errorMessage   String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  user             User                @relation("KnowledgeDocumentUser", fields: [userId], references: [id], onDelete: Cascade)
-  alternate        Alternate           @relation("KnowledgeDocumentAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
-  source           TrainingSource      @relation("KnowledgeDocumentSource", fields: [sourceId], references: [id], onDelete: Cascade)
-  chunks           DocumentChunk[]     @relation("DocumentChunkDocument")
-  knowledgeVersion KnowledgeVersion? @relation("KnowledgeVersionDocument")
-  embeddings       Embedding[]       @relation("EmbeddingDocument")
-  ingestionJobs    IngestionJob[]    @relation("IngestionJobDocument")
-
-  @@index([userId])
-  @@index([alternateId])
-  @@index([sourceId])
-  @@index([version])
-  @@index([status])
-  @@map("knowledge_documents")
-}
-
-model DocumentChunk {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @db.Uuid
-  alternateId    String   @db.Uuid
-  sourceId       String   @db.Uuid
-  documentId     String   @db.Uuid
-  version        Int      @default(0)
-  chunkIndex     Int
-  content        String   @db.Text
-  tokenCount     Int      @default(0)
-  characterCount Int      @default(0)
-  heading        String?
-  metadata       Json?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  user       User               @relation("DocumentChunkUser", fields: [userId], references: [id], onDelete: Cascade)
-  alternate  Alternate          @relation("DocumentChunkAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
-  source     TrainingSource     @relation("DocumentChunkSource", fields: [sourceId], references: [id], onDelete: Cascade)
-  document   KnowledgeDocument  @relation("DocumentChunkDocument", fields: [documentId], references: [id], onDelete: Cascade)
-  embeddings Embedding[]        @relation("EmbeddingChunk")
-
-  // Identity of a chunk within a source generation. Scoped by sourceId (NOT
-  // userId alone) so two sources owned by the same user can both have
-  // version/chunkIndex 0 without colliding.
-  @@unique([sourceId, version, chunkIndex])
-  @@index([userId])
-  @@index([alternateId])
-  @@index([sourceId])
-  @@index([documentId])
-  @@index([version])
-  @@index([isActive])
-  @@map("document_chunks")
-}
-
-model Embedding {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  alternateId String   @db.Uuid
-  sourceId    String   @db.Uuid
-  documentId  String   @db.Uuid
-  chunkId     String   @db.Uuid
-  version     Int      @default(0)
-  model       String
-  modelDimensions Int  @default(1536)
-  tokenCount  Int?
-  // pgvector column. Dimension fixed at schema level (1536). Changing the
-  // embedding model's dimension requires a schema migration of this column.
-  vector      Unsupported("vector(1536)")?
-  createdAt   DateTime @default(now())
-
-  user      User               @relation("EmbeddingUser", fields: [userId], references: [id], onDelete: Cascade)
-  alternate Alternate          @relation("EmbeddingAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
-  source    TrainingSource     @relation("EmbeddingSource", fields: [sourceId], references: [id], onDelete: Cascade)
-  document  KnowledgeDocument  @relation("EmbeddingDocument", fields: [documentId], references: [id], onDelete: Cascade)
-  chunk     DocumentChunk      @relation("EmbeddingChunk", fields: [chunkId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([alternateId])
-  @@index([sourceId])
-  @@index([documentId])
-  @@index([chunkId])
-  @@index([version])
-  @@map("embeddings")
-}
-model IngestionJob {
-  id           String         @id @default(uuid()) @db.Uuid
-  userId       String         @db.Uuid
-  alternateId  String         @db.Uuid
-  sourceId     String         @db.Uuid
-  documentId   String?        @db.Uuid
-  version      Int            @default(0)
-  type         String         @default("INGEST") // INGEST | REPROCESS | CLEANUP | SYNC
-  status       IngestionStage @default(QUEUED)
-  stage        String? // human readable current stage label
-  attempts     Int            @default(0)
-  maxAttempts  Int            @default(3)
-  progress     Int            @default(0) // 0..100 when measurable, else stage-driven
-  isRetryable  Boolean        @default(false)
-  errorCode    String?
-  errorMessage String?
-  payload      Json?
-  result       Json?
-  startedAt    DateTime?
-  completedAt  DateTime?
-  failedAt     DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  alternate Alternate          @relation("IngestionJobAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
-  user      User               @relation("IngestionJobUser", fields: [userId], references: [id], onDelete: Cascade)
-  source    TrainingSource     @relation("IngestionJobSource", fields: [sourceId], references: [id], onDelete: Cascade)
-  document  KnowledgeDocument? @relation("IngestionJobDocument", fields: [documentId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([alternateId])
-  @@index([sourceId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("ingestion_jobs")
-}
-
-model KnowledgeVersion {
-  id           String                 @id @default(uuid()) @db.Uuid
-  userId       String                 @db.Uuid
-  alternateId  String                 @db.Uuid
-  sourceId     String                 @db.Uuid
-  documentId   String                 @unique @db.Uuid
-  version      Int
-  status       KnowledgeVersionStatus @default(PENDING)
-  chunkCount   Int                    @default(0)
-  checksum     String?
-  createdAt    DateTime               @default(now())
-  supersededAt DateTime?
-
-  user      User               @relation("KnowledgeVersionUser", fields: [userId], references: [id], onDelete: Cascade)
-  alternate Alternate          @relation("KnowledgeVersionAlternate", fields: [alternateId], references: [id], onDelete: Cascade)
-  source    TrainingSource     @relation("KnowledgeVersionSource", fields: [sourceId], references: [id], onDelete: Cascade)
-  document  KnowledgeDocument  @relation("KnowledgeVersionDocument", fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@unique([sourceId, version])
-  @@index([userId])
-  @@index([alternateId])
-  @@index([status])
-  @@map("knowledge_versions")
-}
-
-// ===========================================================================
-// VOICE
-// ===========================================================================
-
-model VoiceProfile {
-  id              String       @id @default(uuid()) @db.Uuid
-  userId          String       @db.Uuid
-  alternateId     String       @db.Uuid
-  provider        VoiceProvider
-  voiceId         String
-  name            String
-  type            VoiceType
-  consentGiven    Boolean      @default(false)
-  consentTimestamp DateTime?
-  status          VoiceStatus  @default(PENDING)
-  settings        Json?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([alternateId])
-  @@unique([alternateId])
-  @@map("voice_profiles")
-}
-
-// ===========================================================================
-// AI PROVIDER CONFIG
-// ===========================================================================
-
-model AIProviderConfig {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  alternateId     String   @unique @db.Uuid
-  provider        AIProvider
-  encryptedApiKey String   @db.Text
-  keyLabel        String?
-  status          String   @default("PENDING")
-  defaultModel    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lastValidatedAt DateTime?
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([alternateId])
-  @@index([provider])
-  @@map("ai_provider_configs")
-}
-
-// ===========================================================================
-// CONVERSATIONS
-// ===========================================================================
-
-model Conversation {
-  id            String               @id @default(uuid()) @db.Uuid
-  alternateId   String               @db.Uuid
-  userId        String               @db.Uuid
-  channel       ConversationChannel  @default(CHAT)
-  title         String?
-  sessionId     String?
-  metadata      Json?
-  messageCount  Int                  @default(0)
-  isActive      Boolean              @default(true)
-  satisfaction  Int?
-  feedback      String?
-  startedAt     DateTime             @default(now())
-  endedAt       DateTime?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  Message[]
-
-  @@index([alternateId])
-  @@index([userId])
-  @@index([channel])
-  @@index([createdAt])
-  @@map("conversations")
-}
-
-model Message {
-  id             String       @id @default(uuid()) @db.Uuid
-  conversationId String       @db.Uuid
-  role           MessageRole
-  content        String       @db.Text
-  tokensUsed     Int?
-  modelUsed      String?
-  latencyMs      Int?
-  metadata       Json?
-  sources        Json?
-  createdAt      DateTime     @default(now())
-
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId])
-  @@index([createdAt])
-  @@map("messages")
-}
-
-// ===========================================================================
-// EMAIL
-// ===========================================================================
-
-model EmailThread {
-  id          String        @id @default(uuid()) @db.Uuid
-  alternateId String        @db.Uuid
-  userId      String        @db.Uuid
-  subject     String
-  fromEmail   String
-  toEmail     String
-  threadId    String?
-  direction   EmailDirection @default(INBOUND)
-  status      EmailStatus   @default(SENT)
-  messageCount Int          @default(0)
-  lastActivityAt DateTime?
-  metadata    Json?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  EmailMessage[]
-
-  @@index([alternateId])
-  @@index([userId])
-  @@index([threadId])
-  @@map("email_threads")
-}
-
-model EmailMessage {
-  id         String        @id @default(uuid()) @db.Uuid
-  threadId   String        @db.Uuid
-  messageId  String?
-  fromEmail  String
-  toEmail    String
-  subject    String
-  body       String        @db.Text
-  bodyHtml   String?       @db.Text
-  status     EmailStatus   @default(SENT)
-  metadata   Json?
-  sentAt     DateTime?
-  createdAt  DateTime      @default(now())
-
-  thread EmailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-
-  @@index([threadId])
-  @@map("email_messages")
-}
-
-// ===========================================================================
-// TELEPHONY
-// ===========================================================================
-
-model CallRecord {
-  id            String     @id @default(uuid()) @db.Uuid
-  alternateId   String     @db.Uuid
-  userId        String     @db.Uuid
-  twilioCallSid String?    @unique
-  fromNumber    String
-  toNumber      String
-  direction     String
-  status        CallStatus @default(INITIATED)
-  duration      Int?
-  cost          Decimal?   @db.Decimal(10, 4)
-  recordingUrl  String?
-  transcription String?    @db.Text
-  metadata      Json?
-  startedAt     DateTime?
-  endedAt       DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  alternate Alternate @relation(fields: [alternateId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([alternateId])
-  @@index([userId])
-  @@index([status])
-  @@index([startedAt])
-  @@map("call_records")
-}
-
-// ===========================================================================
-// ANALYTICS
-// ===========================================================================
-
-model AnalyticEvent {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  event     String
-  properties Json?
-  sessionId String?
-  timestamp DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([event])
-  @@index([timestamp])
-  @@map("analytic_events")
-}
-
-// ===========================================================================
-// AUDIT
-// ===========================================================================
-
-model AuditLog {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  tenantId    String?  @db.Uuid
-  action      String
-  entity      String
-  entityId    String?
-  oldValue    Json?
-  newValue    Json?
-  ipAddress   String?
-  userAgent   String?
-  metadata    Json?
-  createdAt   DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tenantId])
-  @@index([action])
-  @@index([entity])
-  @@index([entityId])
-  @@index([createdAt])
-  @@map("audit_logs")
-}
-
-// ===========================================================================
-// API KEYS
-// ===========================================================================
-
-model ApiKey {
-  id        String     @id @default(uuid()) @db.Uuid
-  userId    String     @db.Uuid
-  name      String
-  keyPrefix String
-  keyHash   String     @unique
-  type      ApiKeyType @default(PRIVATE)
-  scopes    Json?
-  lastUsedAt DateTime?
-  expiresAt DateTime?
-  isRevoked Boolean    @default(false)
-  revokedAt DateTime?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([keyHash])
-  @@index([isRevoked])
-  @@map("api_keys")
-}
-
-// ===========================================================================
-// BILLING
-// ===========================================================================
-
-model Subscription {
-  id                String             @id @default(uuid()) @db.Uuid
-  userId            String             @db.Uuid
-  stripeCustomerId  String?            @unique
-  stripeSubscriptionId String?         @unique
-  tier              SubscriptionTier   @default(FREE)
-  status            SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  trialEndsAt       DateTime?
-  canceledAt        DateTime?
-  metadata          Json?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-
-  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  records UsageRecord[]
-
-  @@index([userId])
-  @@index([status])
-  @@index([tier])
-  @@map("subscriptions")
-}
-
-model UsageRecord {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @db.Uuid
-  subscriptionId String?  @db.Uuid
-  feature        String
-  quantity       Int      @default(1)
-  unit           String   @default("count")
-  metadata       Json?
-  recordedAt     DateTime @default(now())
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([feature])
-  @@index([recordedAt])
-  @@map("usage_records")
 }
