@@ -1,0 +1,4 @@
+﻿
+ RUN  v3.2.6 C:/Users/User/Alternate me/backend
+
+{"level":"info","time":"2026-09-21T12:10:50.499Z","pid":23852,"hostname":"DESKTOP-6F2E0JQ","timestamp":"2026-09-21T12:10:50.499Z","message":"Starting a postgresql pool with 5 connections in PgBouncer mode.","target":"quaint::pooled","msg":"prisma info"}

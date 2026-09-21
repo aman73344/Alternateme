@@ -142,11 +142,13 @@ export class MemoryRetrievalService {
     params: { limit?: number; includePrivate?: boolean; types?: MemoryType[] },
   ): Promise<Array<Memory & { similarity: number }>> {
     // Use the database text search
-    const results = await searchMemories({
+        const results = await searchMemories({
       alternateId,
       userId,
       search: query,
       limit: params.limit,
+      includePrivate: params.includePrivate,
+      types: params.types,
     });
 
     return results.memories.map((m) => ({

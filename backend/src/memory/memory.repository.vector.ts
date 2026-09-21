@@ -31,7 +31,9 @@ export async function retrieveByVector(
   const limit = params.limit ?? MEMORY_DEFAULTS.TOP_K;
   const minScore = params.minScore ?? MEMORY_DEFAULTS.MIN_SCORE;
 
-  const queryParams: unknown[] = [queryEmbedding, alternateId, userId, minScore];
+    const vectorStr = `[${queryEmbedding.map((v) => Number(v)).join(',')}]`;
+
+  const queryParams: unknown[] = [vectorStr, alternateId, userId, minScore];
   let paramIndex = 5;
 
   const visibilityClause = params.includePrivate
@@ -111,6 +113,8 @@ export async function findSemanticDuplicates(
   threshold: number = MEMORY_DEFAULTS.MAX_SIMILARITY_THRESHOLD,
   limit: number = 20,
 ): Promise<Memory[]> {
+    const vectorStr = `[${embedding.map((v) => Number(v)).join(',')}]`;
+
   const query = `
     SELECT
       m.id, m."alternateId", m."userId", m.type, m.content,
@@ -153,7 +157,7 @@ export async function findSemanticDuplicates(
       createdAt: Date;
       updatedAt: Date;
       similarity: number;
-    }>>(query, embedding, alternateId, userId, limit);
+    }>>(query, vectorStr, alternateId, userId, limit);
 
     return results
       .filter((r) => Number(r.similarity) > threshold)
