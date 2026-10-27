@@ -144,12 +144,15 @@ describe('registerUser', () => {
 
     expect(result.accessToken).toBe('signed-access-token');
     expect(createUser).not.toHaveBeenCalled();
-    expect(updateUser).toHaveBeenCalledWith('existing-user', expect.objectContaining({
-      email: 'aman723344@gmail.com',
-      username: 'aman723344',
-      passwordHash: 'hashed-password',
-      emailVerified: null,
-    }));
+    expect(updateUser).toHaveBeenCalledWith(
+      'existing-user',
+      expect.objectContaining({
+        email: 'aman723344@gmail.com',
+        username: 'aman723344',
+        passwordHash: 'hashed-password',
+        emailVerified: null,
+      }),
+    );
     expect(createVerificationToken).toHaveBeenCalledTimes(1);
     expect(sendEmail).toHaveBeenCalled();
   });

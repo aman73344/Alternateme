@@ -1,11 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 
-declare global {
-  namespace Express {
-    interface Request {
-      tenantId?: string;
-      userId?: string;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    tenantId?: string;
+    userId?: string;
   }
 }
 

@@ -1,6 +1,6 @@
 /**
  * Memory Constants
- * 
+ *
  * Configuration defaults and limits for the Memory subsystem.
  */
 

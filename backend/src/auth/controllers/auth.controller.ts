@@ -21,7 +21,13 @@ export class AuthController {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { name, username, email, password } = req.body;
-      const result = await registerUser({ name, username, email, password, tenantId: req.tenantId });
+      const result = await registerUser({
+        name,
+        username,
+        email,
+        password,
+        tenantId: req.tenantId,
+      });
       apiResponse.created(res, result);
     } catch (error) {
       next(error);
@@ -124,7 +130,7 @@ export class AuthController {
     try {
       const redirectUri = encodeURIComponent(config.oauth.google.redirectUri);
       const scope = encodeURIComponent('openid email profile');
-      const state = encodeURIComponent(req.query.state as string || 'default');
+      const state = encodeURIComponent((req.query.state as string) || 'default');
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.oauth.google.clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&state=${state}`;
       res.redirect(authUrl);
     } catch (error) {
@@ -134,7 +140,7 @@ export class AuthController {
 
   async githubAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const state = encodeURIComponent(req.query.state as string || 'default');
+      const state = encodeURIComponent((req.query.state as string) || 'default');
       const authUrl = `https://github.com/login/oauth/authorize?client_id=${config.oauth.github.clientId}&redirect_uri=${encodeURIComponent(config.oauth.github.redirectUri)}&scope=user:email&state=${state}`;
       res.redirect(authUrl);
     } catch (error) {
@@ -170,7 +176,7 @@ export class AuthController {
         throw new AuthenticationError('Unable to exchange Google OAuth code');
       }
 
-      const tokenData = await response.json() as { access_token?: string };
+      const tokenData = (await response.json()) as { access_token?: string };
       const userResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${tokenData.access_token}` },
       });
@@ -179,12 +185,21 @@ export class AuthController {
         throw new AuthenticationError('Unable to load Google profile');
       }
 
-      const profile = await userResponse.json() as { email?: string; name?: string; picture?: string };
-      const tokens = await handleOAuthLogin(OAuthProvider.GOOGLE, profile.email || code, {
-        email: profile.email || '',
-        name: profile.name,
-        avatarUrl: profile.picture,
-      }, sessionInfo);
+      const profile = (await userResponse.json()) as {
+        email?: string;
+        name?: string;
+        picture?: string;
+      };
+      const tokens = await handleOAuthLogin(
+        OAuthProvider.GOOGLE,
+        profile.email || code,
+        {
+          email: profile.email || '',
+          name: profile.name,
+          avatarUrl: profile.picture,
+        },
+        sessionInfo,
+      );
       apiResponse.success(res, tokens);
     } catch (error) {
       next(error);
@@ -221,21 +236,34 @@ export class AuthController {
         throw new AuthenticationError('Unable to exchange GitHub OAuth code');
       }
 
-      const tokenData = await tokenResponse.json() as { access_token?: string };
+      const tokenData = (await tokenResponse.json()) as { access_token?: string };
       const userResponse = await fetch('https://api.github.com/user', {
-        headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: 'application/vnd.github+json' },
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+          Accept: 'application/vnd.github+json',
+        },
       });
 
       if (!userResponse.ok) {
         throw new AuthenticationError('Unable to load GitHub profile');
       }
 
-      const profile = await userResponse.json() as { email?: string; login?: string; name?: string; avatar_url?: string };
-      const tokens = await handleOAuthLogin(OAuthProvider.GITHUB, profile.login || code, {
-        email: profile.email || `${profile.login}@github.local`,
-        name: profile.name || profile.login,
-        avatarUrl: profile.avatar_url,
-      }, sessionInfo);
+      const profile = (await userResponse.json()) as {
+        email?: string;
+        login?: string;
+        name?: string;
+        avatar_url?: string;
+      };
+      const tokens = await handleOAuthLogin(
+        OAuthProvider.GITHUB,
+        profile.login || code,
+        {
+          email: profile.email || `${profile.login}@github.local`,
+          name: profile.name || profile.login,
+          avatarUrl: profile.avatar_url,
+        },
+        sessionInfo,
+      );
       apiResponse.success(res, tokens);
     } catch (error) {
       next(error);

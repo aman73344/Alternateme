@@ -150,7 +150,9 @@ describe('Phase 3 — Knowledge Ingestion Pipeline (integration)', () => {
     const pdfOutcome = await runIngestion(pdf.jobId, pdf.id);
     expect(pdfOutcome.chunkCount).toBeGreaterThan(0);
     expect(pdfOutcome.ocrRequired).toBeUndefined();
-    expect((await prisma.trainingSource.findUnique({ where: { id: pdf.id } }))?.status).toBe('READY');
+    expect((await prisma.trainingSource.findUnique({ where: { id: pdf.id } }))?.status).toBe(
+      'READY',
+    );
 
     const docx = await createFileSource(
       'sample.docx',

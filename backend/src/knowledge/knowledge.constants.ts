@@ -53,7 +53,8 @@ export const MAX_DOCUMENT_SIZE = 15 * 1024 * 1024; // 15 MB extracted text cap
 export const MAGIC_BYTES: Array<{ mimeType: string; matches: (b: Uint8Array) => boolean }> = [
   {
     mimeType: 'application/pdf',
-    matches: (b) => b.length > 4 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46,
+    matches: (b) =>
+      b.length > 4 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46,
   },
   {
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -73,7 +74,10 @@ export function detectMagicMime(buffer: Uint8Array): string | null {
   return null;
 }
 
-export function getFileProfile(mimeType: string | null | undefined, fileName?: string): FileProfile | null {
+export function getFileProfile(
+  mimeType: string | null | undefined,
+  fileName?: string,
+): FileProfile | null {
   const ext = fileName ? getExtension(fileName) : '';
   const byMime = mimeType ? FILE_PROFILES.find((p) => p.mimeType === mimeType) : undefined;
   const byExt =

@@ -55,7 +55,10 @@ export const hash = {
 };
 
 export const pagination = {
-  parse: (query: { page?: string; limit?: string }): { page: number; limit: number; skip: number } => {
+  parse: (query: {
+    page?: string;
+    limit?: string;
+  }): { page: number; limit: number; skip: number } => {
     const page = Math.max(1, parseInt(query.page || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(query.limit || '10', 10)));
     const skip = (page - 1) * limit;
@@ -76,11 +79,15 @@ export const retry = {
       } catch (error) {
         attempt++;
         if (attempt >= maxRetries) throw error;
-        const delay = Math.min(baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000, maxDelay);
+        const delay = Math.min(
+          baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000,
+          maxDelay,
+        );
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   },
 };
 
-export const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));

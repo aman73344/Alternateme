@@ -14,7 +14,10 @@ import { createLLMProvider } from '@/rag/llm-provider';
 import { ExtractedMemory } from './memory.types';
 import { MEMORY_EXTRACTION_PROMPT } from './memory.constants';
 import { processExtractedMemory } from './memory.extraction.processor';
-import { createExtractionJob, markExtractionJobProcessing } from './memory-extraction-job.repository';
+import {
+  createExtractionJob,
+  markExtractionJobProcessing,
+} from './memory-extraction-job.repository';
 import { memoryExtractionQueue } from '@/queues';
 
 export interface ExtractionJobData {
@@ -92,7 +95,9 @@ export class MemoryExtractionService {
         return { created: 0, updated: 0, skipped: 0 };
       }
 
-      let created = 0, updated = 0, skipped = 0;
+      let created = 0,
+        updated = 0,
+        skipped = 0;
       for (const ex of extracted) {
         const result = await processExtractedMemory(ex, {
           alternateId,
@@ -152,7 +157,10 @@ export class MemoryExtractionService {
       let arr: ExtractedMemory[];
       if (Array.isArray(parsed)) arr = parsed;
       else if (parsed.memories && Array.isArray(parsed.memories)) arr = parsed.memories;
-      else { logger.warn('Non-array extraction result'); return []; }
+      else {
+        logger.warn('Non-array extraction result');
+        return [];
+      }
 
       return arr.map((m) => ({
         type: m.type as any,

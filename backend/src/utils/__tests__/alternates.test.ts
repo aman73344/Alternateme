@@ -69,7 +69,7 @@ describe('Alternates Module', () => {
         alternateService.createAlternate(user.id, {
           username: 'unique-username',
           displayName: 'Second',
-        })
+        }),
       ).rejects.toThrow();
     });
 
@@ -80,7 +80,7 @@ describe('Alternates Module', () => {
         alternateService.createAlternate(user.id, {
           username: 'admin',
           displayName: 'Admin Wannabe',
-        })
+        }),
       ).rejects.toThrow(ConflictError);
     });
 
@@ -125,9 +125,9 @@ describe('Alternates Module', () => {
         displayName: 'Alice 2',
       });
 
-      await expect(
-        alternateService.deleteAlternate(alternate.id, userB.id)
-      ).rejects.toThrow(NotFoundError);
+      await expect(alternateService.deleteAlternate(alternate.id, userB.id)).rejects.toThrow(
+        NotFoundError,
+      );
     });
 
     it('should soft delete an alternate', async () => {
@@ -278,7 +278,7 @@ describe('Alternates Module', () => {
           name: 'My Voice',
           type: 'CLONED_VOICE',
           consent: false,
-        })
+        }),
       ).rejects.toThrow(BusinessError);
     });
 
@@ -321,9 +321,9 @@ describe('Alternates Module', () => {
         username: 'nopersona-alt',
       });
 
-      await expect(
-        onboardingService.publishAlternate(user.id, alternateId)
-      ).rejects.toThrow(BusinessError);
+      await expect(onboardingService.publishAlternate(user.id, alternateId)).rejects.toThrow(
+        BusinessError,
+      );
     });
 
     it('should not publish without AI provider', async () => {
@@ -344,51 +344,57 @@ describe('Alternates Module', () => {
         tone: 'Professional',
       });
 
-      await expect(
-        onboardingService.publishAlternate(user.id, alternateId)
-      ).rejects.toThrow(BusinessError);
+      await expect(onboardingService.publishAlternate(user.id, alternateId)).rejects.toThrow(
+        BusinessError,
+      );
     });
 
     // The full publish flow performs dozens of sequential round-trips to the
     // remote Postgres (Neon); allow a generous timeout for this test.
-    it('should publish successfully with required steps completed', { timeout: 120_000 }, async () => {
-      const user = await createUser('publish@test.com', 'publishuser');
-      const { alternateId } = await onboardingService.startOnboarding(user.id, {
-        username: 'publish-alt',
-        displayName: 'Publish Alt',
-      });
+    it(
+      'should publish successfully with required steps completed',
+      { timeout: 120_000 },
+      async () => {
+        const user = await createUser('publish@test.com', 'publishuser');
+        const { alternateId } = await onboardingService.startOnboarding(user.id, {
+          username: 'publish-alt',
+          displayName: 'Publish Alt',
+        });
 
-      await onboardingService.savePersonalInfo(user.id, {
-        alternateId,
-        displayName: 'Publish Alt',
-        username: 'publish-alt',
-      });
+        await onboardingService.savePersonalInfo(user.id, {
+          alternateId,
+          displayName: 'Publish Alt',
+          username: 'publish-alt',
+        });
 
-      await onboardingService.savePersona(user.id, {
-        alternateId,
-        tone: 'Professional',
-      });
+        await onboardingService.savePersona(user.id, {
+          alternateId,
+          tone: 'Professional',
+        });
 
-      await onboardingService.saveAIProvider(user.id, {
-        alternateId,
-        provider: 'ANTHROPIC',
-        apiKey: 'sk-ant-test-secret-123456',
-        defaultModel: 'claude-sonnet-4-20250514',
-      });
+        await onboardingService.saveAIProvider(user.id, {
+          alternateId,
+          provider: 'ANTHROPIC',
+          apiKey: 'sk-ant-test-secret-123456',
+          defaultModel: 'claude-sonnet-4-20250514',
+        });
 
-      const result = await onboardingService.publishAlternate(user.id, alternateId);
+        const result = await onboardingService.publishAlternate(user.id, alternateId);
 
-      expect(result.publicUrl).toBe('https://alternate.me/publish-alt');
+        expect(result.publicUrl).toBe('https://alternate.me/publish-alt');
 
-      const alternate = await prisma.alternate.findUnique({ where: { id: alternateId } });
-      expect(alternate?.status).toBe('PUBLISHED');
-      expect(alternate?.visibility).toBe('PUBLIC');
-      expect(alternate?.publishedAt).toBeDefined();
+        const alternate = await prisma.alternate.findUnique({ where: { id: alternateId } });
+        expect(alternate?.status).toBe('PUBLISHED');
+        expect(alternate?.visibility).toBe('PUBLIC');
+        expect(alternate?.publishedAt).toBeDefined();
 
-      const onboarding = await prisma.onboarding.findFirst({ where: { alternateId, userId: user.id } });
-      expect(onboarding?.status).toBe('COMPLETED');
-      expect(onboarding?.completedAt).toBeDefined();
-    });
+        const onboarding = await prisma.onboarding.findFirst({
+          where: { alternateId, userId: user.id },
+        });
+        expect(onboarding?.status).toBe('COMPLETED');
+        expect(onboarding?.completedAt).toBeDefined();
+      },
+    );
 
     it('should not allow user B to publish user A alternate', async () => {
       const userA = await createUser('a3@test.com', 'usera3');
@@ -399,9 +405,9 @@ describe('Alternates Module', () => {
         displayName: 'A3 Alt',
       });
 
-      await expect(
-        onboardingService.publishAlternate(userB.id, alternateId)
-      ).rejects.toThrow(NotFoundError);
+      await expect(onboardingService.publishAlternate(userB.id, alternateId)).rejects.toThrow(
+        NotFoundError,
+      );
     });
 
     it('should reject duplicate username during onboarding', async () => {
@@ -415,7 +421,7 @@ describe('Alternates Module', () => {
         onboardingService.startOnboarding(user.id, {
           username: 'taken-alt',
           displayName: 'Taken Again',
-        })
+        }),
       ).rejects.toThrow(ConflictError);
     });
 
@@ -428,7 +434,7 @@ describe('Alternates Module', () => {
 
       // Cannot complete AI_PROVIDER without a provider config
       await expect(
-        onboardingService.completeStep(user.id, alternateId, 'AI_PROVIDER')
+        onboardingService.completeStep(user.id, alternateId, 'AI_PROVIDER'),
       ).rejects.toThrow(BusinessError);
     });
 
@@ -466,9 +472,9 @@ describe('Alternates Module', () => {
         displayName: 'A4 Alt',
       });
 
-      await expect(
-        onboardingService.getPreview(userB.id, alternateId)
-      ).rejects.toThrow(NotFoundError);
+      await expect(onboardingService.getPreview(userB.id, alternateId)).rejects.toThrow(
+        NotFoundError,
+      );
     });
   });
 
@@ -547,9 +553,9 @@ describe('Alternates Module', () => {
         url: 'https://example.com',
       });
 
-      await expect(
-        sourceService.deleteSource(alternateId, source.id, userB.id)
-      ).rejects.toThrow(NotFoundError);
+      await expect(sourceService.deleteSource(alternateId, source.id, userB.id)).rejects.toThrow(
+        NotFoundError,
+      );
     });
   });
 });

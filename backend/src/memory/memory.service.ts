@@ -10,16 +10,8 @@
 
 import { logger } from '@/utils/logger';
 import { prisma } from '@/database';
-import {
-  Memory,
-  UpdateMemoryInput,
-  MemoryType,
-  MemoryStatus,
-} from './memory.types';
-import {
-  findMemoryById,
-  updateMemory,
-} from './memory.repository';
+import { Memory, UpdateMemoryInput, MemoryType, MemoryStatus } from './memory.types';
+import { findMemoryById, updateMemory } from './memory.repository';
 import {
   searchMemories as searchMemoriesDb,
   deleteMemory,
@@ -37,11 +29,7 @@ export class MemoryService {
   }
 
   /** Get a single memory by ID (with ownership check). */
-  async getMemory(
-    memoryId: string,
-    alternateId: string,
-    userId: string,
-  ): Promise<Memory | null> {
+  async getMemory(memoryId: string, alternateId: string, userId: string): Promise<Memory | null> {
     const memory = await findMemoryById(memoryId, alternateId, userId);
     if (memory) {
       logger.info({ memoryId, alternateId }, 'memory.retrieved');
@@ -50,15 +38,19 @@ export class MemoryService {
   }
 
   /** List memories with filtering and pagination. */
-  async listMemories(alternateId: string, userId: string, params: {
-    types?: MemoryType[];
-    statuses?: MemoryStatus[];
-    search?: string;
-    page?: number;
-    limit?: number;
-    sort?: 'createdAt' | 'updatedAt' | 'importance' | 'lastAccessedAt';
-    sortOrder?: 'asc' | 'desc';
-  }) {
+  async listMemories(
+    alternateId: string,
+    userId: string,
+    params: {
+      types?: MemoryType[];
+      statuses?: MemoryStatus[];
+      search?: string;
+      page?: number;
+      limit?: number;
+      sort?: 'createdAt' | 'updatedAt' | 'importance' | 'lastAccessedAt';
+      sortOrder?: 'asc' | 'desc';
+    },
+  ) {
     return searchMemoriesDb({ alternateId, userId, ...params });
   }
 
@@ -75,11 +67,7 @@ export class MemoryService {
   }
 
   /** Delete a memory (soft delete). */
-  async deleteMemory(
-    memoryId: string,
-    alternateId: string,
-    userId: string,
-  ): Promise<void> {
+  async deleteMemory(memoryId: string, alternateId: string, userId: string): Promise<void> {
     await deleteMemory(memoryId, alternateId, userId);
     // Also remove the embedding
     const { deleteMemoryEmbedding } = await import('./memory-embedding.repository');
@@ -88,11 +76,7 @@ export class MemoryService {
   }
 
   /** Forget a memory — archive + supersede (owner-initiated "forget this"). */
-  async forgetMemory(
-    memoryId: string,
-    alternateId: string,
-    userId: string,
-  ): Promise<void> {
+  async forgetMemory(memoryId: string, alternateId: string, userId: string): Promise<void> {
     await deleteMemory(memoryId, alternateId, userId);
     const { deleteMemoryEmbedding } = await import('./memory-embedding.repository');
     await deleteMemoryEmbedding(memoryId);
@@ -100,11 +84,7 @@ export class MemoryService {
   }
 
   /** Archive a memory (retained for audit, not retrieved). */
-  async archiveMemory(
-    memoryId: string,
-    alternateId: string,
-    userId: string,
-  ): Promise<Memory> {
+  async archiveMemory(memoryId: string, alternateId: string, userId: string): Promise<Memory> {
     const memory = await updateMemory(memoryId, alternateId, userId, {
       status: MemoryStatus.ARCHIVED,
     });
@@ -113,11 +93,7 @@ export class MemoryService {
   }
 
   /** Confirm a memory (explicit user confirmation) — boost confidence. */
-  async confirmMemory(
-    memoryId: string,
-    alternateId: string,
-    userId: string,
-  ): Promise<Memory> {
+  async confirmMemory(memoryId: string, alternateId: string, userId: string): Promise<Memory> {
     const memory = await reinforceMemory(memoryId, alternateId, userId);
     logger.info({ memoryId, alternateId }, 'memory.confirmed');
     return memory;

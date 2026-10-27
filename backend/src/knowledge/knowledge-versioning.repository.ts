@@ -90,10 +90,7 @@ export class KnowledgeVersioningRepository {
    * are still marked active are eligible — deleted/inactive knowledge is
    * always excluded here, not in the (future) RAG layer.
    */
-  async getRetrievalEligibleChunkRows(where: {
-    alternateId?: string;
-    sourceId?: string;
-  }): Promise<
+  async getRetrievalEligibleChunkRows(where: { alternateId?: string; sourceId?: string }): Promise<
     Array<{
       id: string;
       alternateId: string;

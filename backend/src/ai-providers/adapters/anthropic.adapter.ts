@@ -31,7 +31,10 @@ export class AnthropicAdapter implements AIProviderAdapter {
         return { valid: true };
       }
 
-      return { valid: false, error: `Anthropic API key validation failed (HTTP ${response.status})` };
+      return {
+        valid: false,
+        error: `Anthropic API key validation failed (HTTP ${response.status})`,
+      };
     } catch {
       return { valid: false, error: 'Anthropic API key validation failed' };
     }

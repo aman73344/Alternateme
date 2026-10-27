@@ -81,7 +81,7 @@ describe('Chat Security', () => {
     await expect(
       chatService.sendMessage(testAlternateId, testUserId, {
         message: '',
-      })
+      }),
     ).rejects.toThrow();
   });
 
@@ -91,7 +91,7 @@ describe('Chat Security', () => {
     await expect(
       chatService.sendMessage(testAlternateId, testUserId, {
         message: longMessage,
-      })
+      }),
     ).rejects.toThrow();
   });
 
@@ -99,7 +99,7 @@ describe('Chat Security', () => {
     await expect(
       chatService.sendMessage(testAlternateId, otherUserId, {
         message: 'Hello',
-      })
+      }),
     ).rejects.toThrow();
   });
 
@@ -107,7 +107,7 @@ describe('Chat Security', () => {
     await expect(
       chatService.sendMessage(testAlternateId, testUserId, {
         message: 123 as any,
-      })
+      }),
     ).rejects.toThrow();
   });
 });

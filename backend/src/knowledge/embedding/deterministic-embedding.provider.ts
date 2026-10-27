@@ -1,6 +1,10 @@
 import { createHash } from 'crypto';
 import { config } from '@/config';
-import type { EmbeddingProvider, EmbeddingProviderOptions, EmbeddingResult } from './embedding.provider';
+import type {
+  EmbeddingProvider,
+  EmbeddingProviderOptions,
+  EmbeddingResult,
+} from './embedding.provider';
 
 /**
  * DeterministicEmbeddingProvider — a zero-network provider that derives a
@@ -26,7 +30,7 @@ export class DeterministicEmbeddingProvider implements EmbeddingProvider {
         .update(`${i}:${text.slice(0, 4000)}:${this.dimensions}`)
         .digest();
       // Map 16 bits of the digest to roughly [-1, 1].
-      vector[i] = ((digest[0] * 256 + digest[1]) / 32767.5) - 1;
+      vector[i] = (digest[0] * 256 + digest[1]) / 32767.5 - 1;
     }
     return vector;
   }

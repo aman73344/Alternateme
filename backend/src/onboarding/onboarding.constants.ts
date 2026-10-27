@@ -10,6 +10,7 @@ export const OnboardingStep = {
   PUBLISH: 'PUBLISH',
 } as const;
 
+// eslint-disable-next-line no-redeclare
 export type OnboardingStep = (typeof OnboardingStep)[keyof typeof OnboardingStep];
 
 export const ONBOARDING_STEP_ORDER: OnboardingStep[] = [

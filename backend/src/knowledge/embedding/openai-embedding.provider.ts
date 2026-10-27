@@ -1,6 +1,10 @@
 import { logger } from '@/utils/logger';
 import { KnowledgeError } from '../knowledge.errors';
-import type { EmbeddingProvider, EmbeddingProviderOptions, EmbeddingResult } from './embedding.provider';
+import type {
+  EmbeddingProvider,
+  EmbeddingProviderOptions,
+  EmbeddingResult,
+} from './embedding.provider';
 
 interface OpenAiEmbeddingResponse {
   data: Array<{ embedding: number[]; index: number }>;
@@ -42,18 +46,27 @@ export class OpenAiEmbeddingProvider implements EmbeddingProvider {
       });
       if (!res.ok) {
         const body = await res.text().catch(() => '');
-        logger.warn({ status: res.status, model: this.opts.model }, 'OpenAI embeddings request failed');
-        throw new KnowledgeError('EMBEDDING_PROVIDER_ERROR', { status: res.status }, body.slice(0, 500) || 'OpenAI embeddings request failed');
+        logger.warn(
+          { status: res.status, model: this.opts.model },
+          'OpenAI embeddings request failed',
+        );
+        throw new KnowledgeError(
+          'EMBEDDING_PROVIDER_ERROR',
+          { status: res.status },
+          body.slice(0, 500) || 'OpenAI embeddings request failed',
+        );
       }
       const json = (await res.json()) as OpenAiEmbeddingResponse;
-      const vectors = json.data
-        .sort((a, b) => a.index - b.index)
-        .map((d) => d.embedding);
+      const vectors = json.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
       return { vectors, tokenCounts: json.usage ? [json.usage.prompt_tokens] : undefined };
     } catch (err) {
       if (err instanceof KnowledgeError) throw err;
       if (err instanceof Error && err.name === 'AbortError') {
-        throw new KnowledgeError('EMBEDDING_PROVIDER_ERROR', undefined, 'OpenAI embeddings request timed out');
+        throw new KnowledgeError(
+          'EMBEDDING_PROVIDER_ERROR',
+          undefined,
+          'OpenAI embeddings request timed out',
+        );
       }
       logger.warn({ err }, 'OpenAI embeddings network failure');
       throw new KnowledgeError('EMBEDDING_PROVIDER_ERROR');

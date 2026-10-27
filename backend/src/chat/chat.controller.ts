@@ -1,6 +1,6 @@
 /**
  * ChatController — HTTP layer for chat endpoints.
- * 
+ *
  * Endpoints:
  * - POST /alternates/:alternateId/chat — Send a message
  * - GET /alternates/:alternateId/conversations — List conversations
@@ -63,7 +63,7 @@ export class ChatController {
 
       const conversations = await conversationService.getConversationsByAlternate(
         alternateId,
-        userId
+        userId,
       );
 
       res.status(200).json({

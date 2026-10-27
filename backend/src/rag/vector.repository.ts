@@ -1,12 +1,12 @@
 /**
  * VectorRepository — PostgreSQL + pgvector search with multi-tenant filtering.
- * 
+ *
  * CRITICAL: Every retrieval operation MUST be scoped to:
  * - authenticated user
  * - specific Alternate
  * - current knowledge version
  * - active source/document/chunk
- * 
+ *
  * This repository enforces isolation at the database level.
  * Never allow User A to retrieve User B's knowledge.
  */
@@ -78,7 +78,7 @@ export class VectorRepository {
       paramIndex++;
     }
 
-        const vectorParam = `$${paramIndex}::vector`;
+    const vectorParam = `$${paramIndex}::vector`;
     const thresholdParam = `$${paramIndex + 1}`;
     paramIndex += 2;
 
@@ -115,21 +115,23 @@ export class VectorRepository {
     `;
 
     try {
-      const results = await prisma.$queryRawUnsafe<Array<{
-        id: string;
-        content: string;
-        chunkIndex: number;
-        documentId: string;
-        sourceId: string;
-        alternateId: string;
-        version: number;
-        heading: string | null;
-        metadata: unknown;
-        documentTitle: string;
-        sourceUrl: string | null;
-        sourceName: string;
-        similarity: number;
-      }>>(query, ...queryParams);
+      const results = await prisma.$queryRawUnsafe<
+        Array<{
+          id: string;
+          content: string;
+          chunkIndex: number;
+          documentId: string;
+          sourceId: string;
+          alternateId: string;
+          version: number;
+          heading: string | null;
+          metadata: unknown;
+          documentTitle: string;
+          sourceUrl: string | null;
+          sourceName: string;
+          similarity: number;
+        }>
+      >(query, ...queryParams);
 
       return results.map((row) => ({
         id: row.id,
@@ -170,9 +172,7 @@ export class VectorRepository {
    */
   async isPgVectorAvailable(): Promise<boolean> {
     try {
-      await prisma.$executeRawUnsafe(
-        `SELECT 1 FROM pg_extension WHERE extname = 'vector'`
-      );
+      await prisma.$executeRawUnsafe(`SELECT 1 FROM pg_extension WHERE extname = 'vector'`);
       return true;
     } catch {
       return false;
@@ -185,7 +185,7 @@ export class VectorRepository {
   async countEmbeddings(alternateId: string): Promise<number> {
     const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
       `SELECT COUNT(*)::bigint as count FROM "embeddings" WHERE "alternateId" = $1::uuid`,
-      alternateId
+      alternateId,
     );
     return Number(result[0]?.count ?? 0);
   }

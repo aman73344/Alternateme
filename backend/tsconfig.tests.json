@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "noEmit": true
+  },
+  "include": [
+    "src/tests/agent/**/*.ts",
+    "src/tests/integration/agent-orchestration.test.ts"
+  ],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

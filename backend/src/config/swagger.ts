@@ -132,8 +132,15 @@ const swaggerDefinition = {
       OnboardingStatus: {
         type: 'object',
         properties: {
-          status: { type: 'string', enum: ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED'] },
-          currentStep: { type: 'string', enum: ['PERSONAL', 'SOURCES', 'PERSONA', 'VOICE', 'AI_PROVIDER', 'PUBLISH'], nullable: true },
+          status: {
+            type: 'string',
+            enum: ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED'],
+          },
+          currentStep: {
+            type: 'string',
+            enum: ['PERSONAL', 'SOURCES', 'PERSONA', 'VOICE', 'AI_PROVIDER', 'PUBLISH'],
+            nullable: true,
+          },
           completedSteps: { type: 'array', items: { type: 'string' } },
           alternateId: { type: 'string', format: 'uuid', nullable: true },
         },

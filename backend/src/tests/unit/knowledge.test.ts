@@ -51,7 +51,9 @@ describe('splitIntoSentences', () => {
 
 describe('tokenizeSegments', () => {
   it('keeps fenced code blocks intact as a single segment', () => {
-    const segments = tokenizeSegments('line before\n```js\nconst a = 1;\n\nconst b = 2;\n```\nline after');
+    const segments = tokenizeSegments(
+      'line before\n```js\nconst a = 1;\n\nconst b = 2;\n```\nline after',
+    );
     const code = segments.filter((s) => s.type === 'code');
     expect(code).toHaveLength(1);
     expect(code[0].text).toContain('const a = 1;');
@@ -125,9 +127,9 @@ describe('ChunkingService', () => {
   it('keeps code blocks whole when they fit', () => {
     const doc = '```\n' + Array.from({ length: 5 }, (_, i) => `line ${i}`).join('\n') + '\n```';
     const chunks = service.chunk(doc);
-    expect(
-      chunks.some((c) => c.content.includes('line 0') && c.content.includes('line 4')),
-    ).toBe(true);
+    expect(chunks.some((c) => c.content.includes('line 0') && c.content.includes('line 4'))).toBe(
+      true,
+    );
   });
 });
 describe('ContentCleaner', () => {
@@ -161,7 +163,9 @@ describe('ContentCleaner', () => {
   });
 
   it('drops repeated boilerplate lines but keeps markdown headings', () => {
-    const junk = ['Menu', 'body one', '# Title', 'Menu', 'body two', 'Menu', 'body three'].join('\n');
+    const junk = ['Menu', 'body one', '# Title', 'Menu', 'body two', 'Menu', 'body three'].join(
+      '\n',
+    );
     const out = cleaner.clean({ content: junk });
     expect(out.content.split('\n').filter((l) => l.trim() === 'Menu')).toHaveLength(0);
     expect(out.content).toContain('body one');
@@ -282,8 +286,12 @@ describe('extractor registry routing', () => {
     ).toBe('docx');
     expect(resolve({ mimeType: 'text/plain', fileName: 'a.txt' })?.id).toBe('text');
     expect(resolve({ mimeType: 'text/markdown', fileName: 'a.md' })?.id).toBe('markdown');
-    expect(resolve({ type: 'URL', mimeType: 'text/html', buffer: Buffer.from('<html/>') })?.id).toBe('web');
-    expect(resolve({ type: 'YOUTUBE', url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' })?.id).toBe('youtube');
+    expect(
+      resolve({ type: 'URL', mimeType: 'text/html', buffer: Buffer.from('<html/>') })?.id,
+    ).toBe('web');
+    expect(resolve({ type: 'YOUTUBE', url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' })?.id).toBe(
+      'youtube',
+    );
     expect(resolve({ type: 'LINKEDIN', url: 'https://linkedin.com/in/x' })?.id).toBe('linkedin');
   });
 });
@@ -361,14 +369,24 @@ describe('file extractors', () => {
     const extractor = extractorRegistry.get('pdf');
     const bogus = Buffer.from('%PDF-1.4 nonsense that is not a real document body');
     await expect(
-      extractor!.extract({ type: 'FILE', mimeType: 'application/pdf', fileName: 'bad.pdf', buffer: bogus }),
+      extractor!.extract({
+        type: 'FILE',
+        mimeType: 'application/pdf',
+        fileName: 'bad.pdf',
+        buffer: bogus,
+      }),
     ).rejects.toMatchObject({ code: 'CORRUPT_DOCUMENT' });
   });
 
   it('rejects an empty TXT with EMPTY_DOCUMENT', async () => {
     const extractor = extractorRegistry.get('text');
     await expect(
-      extractor!.extract({ type: 'FILE', mimeType: 'text/plain', fileName: 'empty.txt', buffer: Buffer.from('   \n  ') }),
+      extractor!.extract({
+        type: 'FILE',
+        mimeType: 'text/plain',
+        fileName: 'empty.txt',
+        buffer: Buffer.from('   \n  '),
+      }),
     ).rejects.toMatchObject({ code: 'EMPTY_DOCUMENT' });
   });
 });

@@ -3,22 +3,23 @@
  */
 
 import { prisma } from '@/database';
-import {
-  MemoryType,
-  MemoryStatus,
-  MemoryVisibility,
-  Memory,
-} from './memory.types';
+import { MemoryType, MemoryStatus, MemoryVisibility, Memory } from './memory.types';
 import { toMemory } from './memory.repository';
 import { NotFoundError } from '@/utils/errors';
 
 /** Find existing memory by normalized content. */
 export async function findExistingByNormalizedContent(
-  alternateId: string, userId: string, normalizedContent: string, type: MemoryType,
+  alternateId: string,
+  userId: string,
+  normalizedContent: string,
+  type: MemoryType,
 ): Promise<Memory | null> {
   const memory = await prisma.memory.findFirst({
     where: {
-      alternateId, userId, normalizedContent, type,
+      alternateId,
+      userId,
+      normalizedContent,
+      type,
       status: { in: [MemoryStatus.ACTIVE, MemoryStatus.SUPERSEDED] },
     },
   });
@@ -27,7 +28,9 @@ export async function findExistingByNormalizedContent(
 
 /** Check if a memory exists. */
 export async function memoryExists(
-  memoryId: string, alternateId: string, userId: string,
+  memoryId: string,
+  alternateId: string,
+  userId: string,
 ): Promise<boolean> {
   const count = await prisma.memory.count({ where: { id: memoryId, alternateId, userId } });
   return count > 0;
@@ -35,7 +38,9 @@ export async function memoryExists(
 
 /** Soft delete a memory and its embedding. */
 export async function deleteMemory(
-  memoryId: string, alternateId: string, userId: string,
+  memoryId: string,
+  alternateId: string,
+  userId: string,
 ): Promise<boolean> {
   try {
     // Verify the memory belongs to this tenant BEFORE deleting the embedding
@@ -59,8 +64,12 @@ export async function deleteMemory(
     if (err.code === 'P2025') throw new NotFoundError('Memory not found');
     throw err;
   }
-}export async function supersedeMemory(
-  memoryId: string, alternateId: string, userId: string, supersededById?: string,
+}
+export async function supersedeMemory(
+  memoryId: string,
+  alternateId: string,
+  userId: string,
+  supersededById?: string,
 ): Promise<Memory> {
   const memory = await prisma.memory.update({
     where: { id: memoryId, alternateId, userId },
@@ -75,10 +84,13 @@ export async function deleteMemory(
 
 /** Reinforce an existing memory. */
 export async function reinforceMemory(
-  memoryId: string, alternateId: string, userId: string,
+  memoryId: string,
+  alternateId: string,
+  userId: string,
 ): Promise<Memory> {
   const current = await prisma.memory.findUnique({
-    where: { id: memoryId }, select: { confidence: true },
+    where: { id: memoryId },
+    select: { confidence: true },
   });
   const updated = await prisma.memory.update({
     where: { id: memoryId, alternateId, userId },
@@ -119,13 +131,12 @@ export async function searchMemories(params: {
   const sortField = params.sort ?? 'createdAt';
   const sortOrder = params.sortOrder ?? 'desc';
 
-      const where: any = {
+  const where: any = {
     alternateId: params.alternateId,
     userId: params.userId,
     // Only retrieve ACTIVE memories by default (excludes DELETED, ARCHIVED, EXPIRED, SUPERSEDED)
-    status: params.statuses && params.statuses.length > 0
-      ? { in: params.statuses }
-      : MemoryStatus.ACTIVE,
+    status:
+      params.statuses && params.statuses.length > 0 ? { in: params.statuses } : MemoryStatus.ACTIVE,
     // Default visibility: only ALTERNATE unless explicitly including private
     visibility: params.includePrivate ? undefined : MemoryVisibility.ALTERNATE,
   };

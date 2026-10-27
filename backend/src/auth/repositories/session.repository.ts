@@ -25,11 +25,17 @@ export async function findActiveSessions(userId: string): Promise<Session[]> {
 }
 
 export async function revokeSession(sessionId: string): Promise<Session> {
-  return prisma.session.update({ where: { id: sessionId }, data: { isActive: false, revokedAt: new Date() } });
+  return prisma.session.update({
+    where: { id: sessionId },
+    data: { isActive: false, revokedAt: new Date() },
+  });
 }
 
 export async function revokeAllSessions(userId: string): Promise<void> {
-  await prisma.session.updateMany({ where: { userId, isActive: true }, data: { isActive: false, revokedAt: new Date() } });
+  await prisma.session.updateMany({
+    where: { userId, isActive: true },
+    data: { isActive: false, revokedAt: new Date() },
+  });
 }
 
 export async function updateSessionActivity(sessionId: string): Promise<Session> {

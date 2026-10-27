@@ -85,7 +85,8 @@ export const alternateController = {
   checkUsernameAvailability: async (req: Request, res: Response) => {
     // Route is GET /alternates/username/:username/availability — read path param.
     // Also accept ?username= for backwards compatibility.
-    const username = (req.params.username as string | undefined) || (req.query.username as string | undefined);
+    const username =
+      (req.params.username as string | undefined) || (req.query.username as string | undefined);
     const excludeId = req.query.excludeId as string | undefined;
 
     if (!username || typeof username !== 'string') {

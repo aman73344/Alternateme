@@ -74,7 +74,10 @@ export class YoutubeExtractor implements DocumentExtractor {
         const hh = Math.floor(seconds / 3600);
         const mm = Math.floor((seconds % 3600) / 60);
         const ss = seconds % 60;
-        const stamp = hh > 0 ? `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` : `${mm}:${String(ss).padStart(2, '0')}`;
+        const stamp =
+          hh > 0
+            ? `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+            : `${mm}:${String(ss).padStart(2, '0')}`;
         return `[${stamp}] ${(entry.text || '').trim()}`;
       });
 

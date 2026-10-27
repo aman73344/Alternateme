@@ -24,7 +24,9 @@ export function authorizePermission(requiredPermissions: string[]) {
     }
 
     const userPermissions = req.authUser.permissions ?? [];
-    const hasPermission = requiredPermissions.every((permission) => userPermissions.includes(permission));
+    const hasPermission = requiredPermissions.every((permission) =>
+      userPermissions.includes(permission),
+    );
 
     if (!hasPermission) {
       next(new AuthorizationError('Insufficient permissions'));

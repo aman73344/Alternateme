@@ -37,6 +37,8 @@ export function createDocumentProcessingWorker(): Worker {
     },
     { connection, concurrency: config.queue.concurrency },
   );
-  worker.on('failed', (job, err) => logger.error({ jobId: job?.id, err: err?.message }, 'Document processing failed'));
+  worker.on('failed', (job, err) =>
+    logger.error({ jobId: job?.id, err: err?.message }, 'Document processing failed'),
+  );
   return worker;
 }

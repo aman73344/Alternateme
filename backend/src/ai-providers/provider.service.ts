@@ -122,7 +122,10 @@ export const providerService = {
    * Decrypt a provider's API key for use by the AI orchestration layer (Phase 5).
    * Must never be exposed through an API response.
    */
-  async getDecryptedApiKey(alternateId: string, userId: string): Promise<{ provider: string; apiKey: string; defaultModel: string | null }> {
+  async getDecryptedApiKey(
+    alternateId: string,
+    userId: string,
+  ): Promise<{ provider: string; apiKey: string; defaultModel: string | null }> {
     const config = await prisma.aIProviderConfig.findFirst({
       where: { alternateId, userId },
     });

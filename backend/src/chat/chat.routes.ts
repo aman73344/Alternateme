@@ -1,6 +1,6 @@
 /**
  * Chat Routes — API endpoints for chat functionality.
- * 
+ *
  * All routes require authentication and alternate ownership validation.
  */
 
@@ -38,7 +38,7 @@ router.post(
   '/:alternateId/chat',
   chatRateLimiter,
   requireAlternateOwnership,
-  chatController.sendMessage.bind(chatController)
+  chatController.sendMessage.bind(chatController),
 );
 
 /**
@@ -48,7 +48,7 @@ router.post(
 router.get(
   '/:alternateId/conversations',
   requireAlternateOwnership,
-  chatController.listConversations.bind(chatController)
+  chatController.listConversations.bind(chatController),
 );
 
 /**
@@ -58,7 +58,7 @@ router.get(
 router.get(
   '/:alternateId/conversations/:conversationId',
   requireAlternateOwnership,
-  chatController.getConversation.bind(chatController)
+  chatController.getConversation.bind(chatController),
 );
 
 /**
@@ -68,7 +68,7 @@ router.get(
 router.delete(
   '/:alternateId/conversations/:conversationId',
   requireAlternateOwnership,
-  chatController.deleteConversation.bind(chatController)
+  chatController.deleteConversation.bind(chatController),
 );
 
 /**
@@ -78,7 +78,7 @@ router.delete(
 router.post(
   '/:alternateId/rag/debug',
   requireAlternateOwnership,
-  chatController.debugRag.bind(chatController)
+  chatController.debugRag.bind(chatController),
 );
 
 /**

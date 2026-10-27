@@ -1,6 +1,7 @@
 import type { CleanedContent, ExtractionResult } from './knowledge.types';
 
-const CONTROL_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
+// eslint-disable-next-line no-control-regex
+const CONTROL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const HTTP_TAG_RE = /<[^>]*>/g;
 const ENTITY_RE = /&(amp|lt|gt|quot|apos|nbsp|#\d+|#x[0-9a-fA-F]+);/g;
 const MULTI_SPACE_RE = /[ \t]{2,}/g;
@@ -83,7 +84,9 @@ export interface CleanerOptions {
 export class ContentCleaner {
   constructor(private readonly options: CleanerOptions = {}) {}
 
-  clean(raw: ExtractionResult | { content: string; metadata?: Record<string, unknown> }): CleanedContent {
+  clean(
+    raw: ExtractionResult | { content: string; metadata?: Record<string, unknown> },
+  ): CleanedContent {
     let text = raw.content || '';
 
     // 1. Fix encoding problems before any structural work.

@@ -98,7 +98,14 @@ export const sourceService = {
     const latestJob = await prisma.ingestionJob.findFirst({
       where: { sourceId },
       orderBy: { createdAt: 'desc' },
-      select: { progress: true, stage: true, status: true, errorCode: true, errorMessage: true, isRetryable: true },
+      select: {
+        progress: true,
+        stage: true,
+        status: true,
+        errorCode: true,
+        errorMessage: true,
+        isRetryable: true,
+      },
     });
 
     const [documentCount, chunkCount] = await Promise.all([
@@ -132,7 +139,12 @@ export const sourceService = {
    * processing job/version without duplicating data (idempotency checksum still
    * applies unless force=true).
    */
-  async reprocessSource(alternateId: string, sourceId: string, userId: string, opts: { force?: boolean } = {}) {
+  async reprocessSource(
+    alternateId: string,
+    sourceId: string,
+    userId: string,
+    opts: { force?: boolean } = {},
+  ) {
     const source = await prisma.trainingSource.findFirst({
       where: { id: sourceId, alternateId, userId, status: { not: 'DELETED' } },
     });
@@ -187,7 +199,10 @@ export const sourceService = {
       try {
         await q.add('cleanup', { sourceId, userId, alternateId });
       } catch (err) {
-        logger.warn({ sourceId, err }, 'Failed to enqueue knowledge cleanup; purge can be re-run later');
+        logger.warn(
+          { sourceId, err },
+          'Failed to enqueue knowledge cleanup; purge can be re-run later',
+        );
       }
     } else {
       logger.warn({ sourceId }, 'Redis unavailable; knowledge purge deferred');
@@ -214,7 +229,10 @@ export const sourceService = {
   async enqueueIngestion(data: IngestionJobData): Promise<void> {
     const q = knowledgeIngestionQueue();
     if (!q) {
-      logger.warn({ sourceId: data.sourceId }, 'Redis not available; ingestion job queued in DB only');
+      logger.warn(
+        { sourceId: data.sourceId },
+        'Redis not available; ingestion job queued in DB only',
+      );
       return;
     }
     try {
@@ -223,7 +241,10 @@ export const sourceService = {
       // The IngestionJob row is already persisted in QUEUED state. Coping with
       // a transient queue failure here must never fail the source creation —
       // a reconcile/retry path can re-enqueue from the DB later.
-      logger.warn({ err, sourceId: data.sourceId }, 'Failed to enqueue ingestion job; job remains QUEUED in DB');
+      logger.warn(
+        { err, sourceId: data.sourceId },
+        'Failed to enqueue ingestion job; job remains QUEUED in DB',
+      );
     }
   },
 

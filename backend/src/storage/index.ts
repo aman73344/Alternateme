@@ -42,7 +42,9 @@ class S3StorageAdapter implements StorageAdapter {
   }
 
   async download(_key: string): Promise<Buffer> {
-    throw new StorageError('S3 download is not configured; install @aws-sdk/client-s3 and wire GetObject');
+    throw new StorageError(
+      'S3 download is not configured; install @aws-sdk/client-s3 and wire GetObject',
+    );
   }
 
   async delete(key: string): Promise<void> {

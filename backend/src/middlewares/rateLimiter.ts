@@ -35,3 +35,42 @@ export const authRateLimiter = rateLimit({
     throw new RateLimitError('Too many authentication attempts');
   },
 });
+
+/**
+ * Phase 6 — agent rate limits.
+ * These bound runaway loops, tool abuse and provider spend independently of the
+ * global limiter, which only caps raw request volume.
+ */
+export const agentRunRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'AGENT_RATE_LIMITED',
+      message: 'Too many agent runs. Please try again in a minute.',
+    },
+  },
+  handler: (_req, _res, _next, _options) => {
+    throw new RateLimitError('Too many agent runs');
+  },
+});
+
+export const agentToolRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'AGENT_RATE_LIMITED',
+      message: 'Too many tool operations. Please try again in a minute.',
+    },
+  },
+  handler: (_req, _res, _next, _options) => {
+    throw new RateLimitError('Too many tool operations');
+  },
+});

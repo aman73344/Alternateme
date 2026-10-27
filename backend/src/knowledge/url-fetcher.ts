@@ -65,7 +65,11 @@ export function isPrivateAddress(address: string): boolean {
 export async function assertHostnameSafe(hostname: string): Promise<void> {
   const validation = validateSourceUrl(`https://${hostname}/`);
   if (!validation.valid) {
-    throw new KnowledgeError(validation.error || 'URL_BLOCKED', { hostname }, 'Hostname is blocked by ingestion policy');
+    throw new KnowledgeError(
+      validation.error || 'URL_BLOCKED',
+      { hostname },
+      'Hostname is blocked by ingestion policy',
+    );
   }
   let addresses: { address: string }[];
   try {
@@ -77,7 +81,11 @@ export async function assertHostnameSafe(hostname: string): Promise<void> {
     throw new KnowledgeError('FETCH_FAILED', { hostname }, 'Hostname resolved to no addresses');
   }
   if (addresses.some(({ address }) => isPrivateAddress(address))) {
-    throw new KnowledgeError('SSRF_BLOCKED', { hostname }, 'URL resolves to a private or reserved address');
+    throw new KnowledgeError(
+      'SSRF_BLOCKED',
+      { hostname },
+      'URL resolves to a private or reserved address',
+    );
   }
 }
 
@@ -193,4 +201,3 @@ export async function fetchUrl(
     throw new KnowledgeError('FETCH_FAILED', { url: current, status: res.status });
   }
 }
-

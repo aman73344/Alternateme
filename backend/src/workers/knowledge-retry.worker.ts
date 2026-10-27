@@ -48,6 +48,8 @@ export function createKnowledgeRetryWorker(): Worker {
     },
     { connection, concurrency: config.queue.concurrency },
   );
-  worker.on('failed', (job, err) => logger.error({ jobId: job?.id, err: err?.message }, 'Knowledge retry failed'));
+  worker.on('failed', (job, err) =>
+    logger.error({ jobId: job?.id, err: err?.message }, 'Knowledge retry failed'),
+  );
   return worker;
 }

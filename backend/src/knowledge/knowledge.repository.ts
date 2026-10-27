@@ -92,7 +92,12 @@ export class KnowledgeRepository {
     await this.updateJob(jobId, { status: 'PROCESSING', startedAt: new Date() });
   }
 
-  async markJobStage(jobId: string, status: string, stage: string, progress: number): Promise<void> {
+  async markJobStage(
+    jobId: string,
+    status: string,
+    stage: string,
+    progress: number,
+  ): Promise<void> {
     await this.updateJob(jobId, { status, stage, progress });
   }
 

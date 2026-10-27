@@ -33,14 +33,22 @@ export class SourceResolver {
     // only inside the worker.
     if (source.type === 'FILE') {
       if (!source.storageKey) {
-        throw new KnowledgeError('EXTRACTION_FAILED', { sourceId: source.id }, 'File source has no stored object');
+        throw new KnowledgeError(
+          'EXTRACTION_FAILED',
+          { sourceId: source.id },
+          'File source has no stored object',
+        );
       }
       let buffer: Buffer;
       try {
         buffer = await storageProvider.download(source.storageKey);
       } catch (err) {
         logger.warn({ err, storageKey: source.storageKey }, 'Download from storage failed');
-        throw new KnowledgeError('EXTRACTION_FAILED', { sourceId: source.id }, 'Could not read the stored file');
+        throw new KnowledgeError(
+          'EXTRACTION_FAILED',
+          { sourceId: source.id },
+          'Could not read the stored file',
+        );
       }
       return {
         type: 'FILE',
@@ -57,7 +65,11 @@ export class SourceResolver {
     // URL — validate + SSRF-safe fetch with redirect re-validation.
     if (source.type === 'URL') {
       if (!source.url) {
-        throw new KnowledgeError('INVALID_URL', { sourceId: source.id }, 'URL source is missing its URL');
+        throw new KnowledgeError(
+          'INVALID_URL',
+          { sourceId: source.id },
+          'URL source is missing its URL',
+        );
       }
       const fetched = await fetchUrl(source.url);
       return {

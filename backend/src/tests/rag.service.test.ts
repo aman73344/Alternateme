@@ -1,6 +1,6 @@
 /**
  * RAG Service Tests
- * 
+ *
  * Tests the retrieval pipeline:
  * - Query embedding generation
  * - Vector search with multi-tenant filtering
@@ -50,7 +50,7 @@ describe('RAG Service', () => {
         email: `rag-other-${Date.now()}@test.com`,
         username: `ragother${Date.now()}`,
         passwordHash: 'test-hash',
-                emailVerified: new Date(),
+        emailVerified: new Date(),
       },
     });
     otherUserId = otherUser.id;

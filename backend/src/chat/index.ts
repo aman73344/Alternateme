@@ -1,6 +1,6 @@
 /**
  * Chat Module — Chat functionality with RAG integration.
- * 
+ *
  * Exports all chat components for use by the application.
  */
 

@@ -30,7 +30,12 @@ export interface ServiceResponse<T = unknown> {
 
 export interface IBaseRepository<T> {
   findById(id: string): Promise<T | null>;
-  findMany(params?: { skip?: number; take?: number; where?: unknown; orderBy?: unknown }): Promise<T[]>;
+  findMany(params?: {
+    skip?: number;
+    take?: number;
+    where?: unknown;
+    orderBy?: unknown;
+  }): Promise<T[]>;
   create(data: unknown): Promise<T>;
   update(id: string, data: unknown): Promise<T>;
   delete(id: string): Promise<T>;

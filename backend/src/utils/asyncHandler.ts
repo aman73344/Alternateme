@@ -6,7 +6,7 @@ import { Request, Response, NextFunction } from 'express';
  * promises from async handlers, causing requests to hang indefinitely.
  */
 export function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>,
 ): (req: Request, res: Response, next: NextFunction) => void {
   return (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch(next);

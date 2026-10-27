@@ -71,7 +71,10 @@ export async function createMemory(input: CreateMemoryInput): Promise<Memory> {
 
 /** Update a memory. */
 export async function updateMemory(
-  memoryId: string, alternateId: string, userId: string, input: UpdateMemoryInput,
+  memoryId: string,
+  alternateId: string,
+  userId: string,
+  input: UpdateMemoryInput,
 ): Promise<Memory> {
   const memory = await prisma.memory.update({
     where: { id: memoryId, alternateId, userId },
@@ -85,7 +88,9 @@ export async function updateMemory(
 
 /** Find a memory by ID. */
 export async function findMemoryById(
-  memoryId: string, alternateId: string, userId: string,
+  memoryId: string,
+  alternateId: string,
+  userId: string,
 ): Promise<Memory | null> {
   const memory = await prisma.memory.findFirst({ where: { id: memoryId, alternateId, userId } });
   return memory ? toMemory(memory) : null;
@@ -93,11 +98,17 @@ export async function findMemoryById(
 
 /** Find existing memory by source message. */
 export async function findExistingBySourceMessage(
-  alternateId: string, userId: string, sourceMessageId: string, type: MemoryType,
+  alternateId: string,
+  userId: string,
+  sourceMessageId: string,
+  type: MemoryType,
 ): Promise<Memory | null> {
   const memory = await prisma.memory.findFirst({
     where: {
-      alternateId, userId, sourceMessageId, type,
+      alternateId,
+      userId,
+      sourceMessageId,
+      type,
       status: { in: [MemoryStatus.ACTIVE, MemoryStatus.SUPERSEDED] },
     },
     orderBy: { createdAt: 'desc' },

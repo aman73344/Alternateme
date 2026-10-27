@@ -17,9 +17,30 @@ const PRIVATE_IP_PATTERNS = [
   /^::1$/, // IPv6 loopback
 ];
 
-const BLOCKED_PROTOCOLS = ['file:', 'ftp:', 'ftps:', 'gopher:', 'dict:', 'ldap:', 'ldaps:', 'telnet:', 'smb:', 'data:', 'javascript:'];
+const BLOCKED_PROTOCOLS = [
+  'file:',
+  'ftp:',
+  'ftps:',
+  'gopher:',
+  'dict:',
+  'ldap:',
+  'ldaps:',
+  'telnet:',
+  'smb:',
+  'data:',
+  'javascript:',
+];
 
-const BLOCKED_HOSTNAMES = ['localhost', 'localhost.localdomain', 'metadata.google.internal', 'metadata', 'puppet', 'consul', 'docker', 'kubernetes'];
+const BLOCKED_HOSTNAMES = [
+  'localhost',
+  'localhost.localdomain',
+  'metadata.google.internal',
+  'metadata',
+  'puppet',
+  'consul',
+  'docker',
+  'kubernetes',
+];
 
 /**
  * Validate a URL for safe ingestion.

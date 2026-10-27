@@ -35,7 +35,10 @@ export function hasEmbeddingProvider(name: string): boolean {
   return factories.has(name.toLowerCase());
 }
 
-export function createEmbeddingProvider(name: string, opts: EmbeddingProviderOptions): EmbeddingProvider {
+export function createEmbeddingProvider(
+  name: string,
+  opts: EmbeddingProviderOptions,
+): EmbeddingProvider {
   const factory = factories.get(name.toLowerCase());
   if (!factory) {
     throw new Error(`No embedding provider registered for "${name}"`);

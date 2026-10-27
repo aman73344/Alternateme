@@ -1,8 +1,13 @@
 import { prisma } from '@/database';
 import { OAuthAccount, OAuthProvider } from '@prisma/client';
 
-export async function findOAuthAccount(provider: OAuthProvider, providerAccountId: string): Promise<OAuthAccount | null> {
-  return prisma.oAuthAccount.findUnique({ where: { provider_providerAccountId: { provider, providerAccountId } } });
+export async function findOAuthAccount(
+  provider: OAuthProvider,
+  providerAccountId: string,
+): Promise<OAuthAccount | null> {
+  return prisma.oAuthAccount.findUnique({
+    where: { provider_providerAccountId: { provider, providerAccountId } },
+  });
 }
 
 export async function findOAuthAccountsByUser(userId: string): Promise<OAuthAccount[]> {

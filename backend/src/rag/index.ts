@@ -1,6 +1,6 @@
 /**
  * RAG Module — Retrieval-Augmented Generation pipeline.
- * 
+ *
  * Exports all RAG components for use by the chat system and other modules.
  */
 

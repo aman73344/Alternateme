@@ -1,6 +1,6 @@
 /**
  * Memory Type Definitions
- * 
+ *
  * Types used throughout the Memory subsystem for Phase 5.
  */
 
@@ -19,23 +19,23 @@ export enum MemoryType {
 
 /** Memory lifecycle status */
 export enum MemoryStatus {
-  ACTIVE = 'ACTIVE',        // Available for retrieval
-  ARCHIVED = 'ARCHIVED',    // Retained for history, not retrieved
-  DELETED = 'DELETED',      // Soft-deleted, not retrievable
-  EXPIRED = 'EXPIRED',      // Past expiration, not retrieved
+  ACTIVE = 'ACTIVE', // Available for retrieval
+  ARCHIVED = 'ARCHIVED', // Retained for history, not retrieved
+  DELETED = 'DELETED', // Soft-deleted, not retrievable
+  EXPIRED = 'EXPIRED', // Past expiration, not retrieved
   SUPERSEDED = 'SUPERSEDED', // Replaced by newer memory
 }
 
 /** Memory visibility — who can access */
 export enum MemoryVisibility {
-  PRIVATE = 'PRIVATE',      // Owner only
-  ALTERNATE = 'ALTERNATE',  // Owner + alternate (public chat can use)
+  PRIVATE = 'PRIVATE', // Owner only
+  ALTERNATE = 'ALTERNATE', // Owner + alternate (public chat can use)
 }
 
 /** Source type — how memory was created */
 export enum MemorySourceType {
-  EXPLICIT = 'EXPLICIT',   // User directly stated
-  INFERRED = 'INFERRED',   // Derived from conversation
+  EXPLICIT = 'EXPLICIT', // User directly stated
+  INFERRED = 'INFERRED', // Derived from conversation
   ASSOCIATED = 'ASSOCIATED', // From related context
 }
 
@@ -98,7 +98,7 @@ export interface MemorySearchParams {
   userId: string;
   queryEmbedding?: number[];
   queryText?: string;
-  query?: string;  // Convenience alias for queryText
+  query?: string; // Convenience alias for queryText
   types?: MemoryType[];
   statuses?: MemoryStatus[];
   limit?: number;

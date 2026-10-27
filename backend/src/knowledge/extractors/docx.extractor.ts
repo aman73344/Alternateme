@@ -12,9 +12,7 @@ import type { ExtractionResult } from '../knowledge.types';
  * tolerable because the result goes through ContentCleaner afterwards.
  */
 export function htmlToKnowledgeMarkdown(html: string): string {
-  let s = html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '');
+  let s = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
 
   // Convert whole heading elements (open + close) to markdown ATX headings so
   // the chunker can attribute sections; the generic tag-strip later must not
@@ -33,7 +31,11 @@ export function htmlToKnowledgeMarkdown(html: string): string {
   s = s.replace(/<\/p>|<p[^>]*>/gi, '\n\n');
   s = s.replace(/<\/li>|<\/ul>|<\/ol>/gi, '\n');
   s = s.replace(/<[^>]+>/g, '');
-  s = s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+  s = s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"');
 
   return s
     .split('\n')
@@ -52,7 +54,11 @@ export class DocxExtractor implements DocumentExtractor {
 
   async extract(source: ExtractSource): Promise<ExtractionResult> {
     if (!source.buffer) {
-      throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', undefined, 'DOCX source is missing its file content');
+      throw new KnowledgeError(
+        'UNSUPPORTED_FILE_TYPE',
+        undefined,
+        'DOCX source is missing its file content',
+      );
     }
     try {
       const result = await mammoth.convertToHtml({ buffer: source.buffer });

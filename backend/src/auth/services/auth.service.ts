@@ -1,12 +1,22 @@
 import { date } from '@/utils/helpers';
 const { addHours, addDays } = date;
 import { config } from '@/config';
-import { AuthenticationError, AuthorizationError, ConflictError, NotFoundError } from '@/utils/errors';
+import {
+  AuthenticationError,
+  AuthorizationError,
+  ConflictError,
+  NotFoundError,
+} from '@/utils/errors';
 import { hashPassword, verifyPassword } from '@/auth/utils/password';
 import { createRandomToken, hashToken } from '@/auth/utils/crypto';
 import { signAccessToken } from '@/auth/utils/jwt';
 import { sendEmail } from '@/auth/utils/mailer';
-import { buildWelcomeEmail, buildVerificationEmail, buildPasswordResetEmail, buildSecurityAlertEmail } from '@/auth/utils/email-templates';
+import {
+  buildWelcomeEmail,
+  buildVerificationEmail,
+  buildPasswordResetEmail,
+  buildSecurityAlertEmail,
+} from '@/auth/utils/email-templates';
 import { prisma } from '@/database';
 import * as userRepo from '@/auth/repositories/user.repository';
 import * as tokenRepo from '@/auth/repositories/token.repository';
@@ -188,7 +198,11 @@ export async function resendVerification(email: string): Promise<void> {
   });
 }
 
-export async function loginWithPassword(data: { email: string; password: string; session: SessionInfo }): Promise<AuthTokens> {
+export async function loginWithPassword(data: {
+  email: string;
+  password: string;
+  session: SessionInfo;
+}): Promise<AuthTokens> {
   const user = await userRepo.findUserByEmail(data.email.toLowerCase());
   if (!user || !user.passwordHash) {
     throw new AuthenticationError('Invalid credentials');
@@ -253,7 +267,11 @@ export async function loginWithPassword(data: { email: string; password: string;
     action: 'LOGIN_SUCCESS',
     entity: 'User',
     entityId: user.id,
-    metadata: { sessionId: session.id, ipAddress: data.session.ipAddress, userAgent: data.session.userAgent },
+    metadata: {
+      sessionId: session.id,
+      ipAddress: data.session.ipAddress,
+      userAgent: data.session.userAgent,
+    },
   });
 
   return {
@@ -263,7 +281,10 @@ export async function loginWithPassword(data: { email: string; password: string;
   };
 }
 
-export async function refreshAuthToken(refreshToken: string, sessionInfo: SessionInfo): Promise<AuthTokens> {
+export async function refreshAuthToken(
+  refreshToken: string,
+  sessionInfo: SessionInfo,
+): Promise<AuthTokens> {
   const tokenHash = hashToken(refreshToken);
   const tokenRecord = await tokenRepo.findRefreshToken(tokenHash);
   if (!tokenRecord) {
@@ -411,7 +432,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   const emailPayload = buildSecurityAlertEmail(
     user.name || user.email,
     user.email,
-    'Your password was changed successfully.'
+    'Your password was changed successfully.',
   );
   await sendEmail(user.email, emailPayload.subject, emailPayload.html);
 
@@ -423,7 +444,12 @@ export async function resetPassword(token: string, newPassword: string): Promise
   });
 }
 
-export async function handleOAuthLogin(provider: OAuthProvider, providerAccountId: string, profile: { email: string; name?: string; avatarUrl?: string }, session: SessionInfo): Promise<AuthTokens> {
+export async function handleOAuthLogin(
+  provider: OAuthProvider,
+  providerAccountId: string,
+  profile: { email: string; name?: string; avatarUrl?: string },
+  session: SessionInfo,
+): Promise<AuthTokens> {
   let oauthAccount = await oauthRepo.findOAuthAccount(provider, providerAccountId);
   if (oauthAccount) {
     const user = await userRepo.findUserById(oauthAccount.userId);
@@ -442,7 +468,11 @@ export async function handleOAuthLogin(provider: OAuthProvider, providerAccountI
     return createSessionForUser(existingUser.id, session);
   }
 
-  const baseUsername = (profile.email || '').split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 20);
+  const baseUsername = (profile.email || '')
+    .split('@')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .slice(0, 20);
   let username = baseUsername;
   let suffix = 1;
   while (await userRepo.findUserByUsername(username)) {

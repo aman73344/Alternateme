@@ -15,7 +15,8 @@ export const KNOWLEDGE_ERRORS: Record<string, KnowledgeErrorSpec> = {
     httpStatus: httpStatus.UNPROCESSABLE_ENTITY,
     isRetryable: false,
     message: 'The uploaded file type is not supported for ingestion',
-    safeMessage: 'This file type is not supported. Please upload a PDF, DOCX, TXT or Markdown file.',
+    safeMessage:
+      'This file type is not supported. Please upload a PDF, DOCX, TXT or Markdown file.',
   },
   FILE_TOO_LARGE: {
     code: 'FILE_TOO_LARGE',
@@ -150,8 +151,7 @@ export class KnowledgeError extends BaseError {
   public readonly safeMessage: string;
 
   constructor(code: string, detail?: unknown, overrideMessage?: string) {
-    const spec: KnowledgeErrorSpec =
-      KNOWLEDGE_ERRORS[code] || KNOWLEDGE_ERRORS.EXTRACTION_FAILED;
+    const spec: KnowledgeErrorSpec = KNOWLEDGE_ERRORS[code] || KNOWLEDGE_ERRORS.EXTRACTION_FAILED;
     super(overrideMessage || spec.message, spec.httpStatus, spec.code, spec.isRetryable, detail);
     this.isRetryable = spec.isRetryable;
     this.safeMessage = overrideMessage || spec.safeMessage;

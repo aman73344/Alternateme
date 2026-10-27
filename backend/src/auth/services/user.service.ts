@@ -7,7 +7,9 @@ import * as sessionRepo from '@/auth/repositories/session.repository';
 
 function getPasswordHistory(metadata: Record<string, unknown> | null | undefined): string[] {
   const history = metadata?.passwordHistory;
-  return Array.isArray(history) ? history.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(history)
+    ? history.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 export async function getCurrentUser(userId: string) {
@@ -16,7 +18,18 @@ export async function getCurrentUser(userId: string) {
   return user;
 }
 
-export async function updateUserProfile(userId: string, data: Partial<{ name: string; username: string; bio: string; avatarUrl: string; timezone: string; language: string; theme: string; }>) {
+export async function updateUserProfile(
+  userId: string,
+  data: Partial<{
+    name: string;
+    username: string;
+    bio: string;
+    avatarUrl: string;
+    timezone: string;
+    language: string;
+    theme: string;
+  }>,
+) {
   if (data.username) {
     const existing = await userRepo.findUserByUsername(data.username);
     if (existing && existing.id !== userId) {
@@ -26,14 +39,20 @@ export async function updateUserProfile(userId: string, data: Partial<{ name: st
   return userRepo.updateUser(userId, data);
 }
 
-export async function updateUserPassword(userId: string, currentPassword: string, newPassword: string) {
+export async function updateUserPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+) {
   const user = await userRepo.findUserById(userId);
   if (!user || !user.passwordHash) throw new NotFoundError('User not found');
   const matches = await verifyPassword(user.passwordHash, currentPassword);
   if (!matches) throw new AuthorizationError('Current password is incorrect');
 
   const history = getPasswordHistory((user.metadata as Record<string, unknown> | null) ?? null);
-  const previousPasswordMatches = await Promise.all(history.map((previousHash) => verifyPassword(previousHash, newPassword)));
+  const previousPasswordMatches = await Promise.all(
+    history.map((previousHash) => verifyPassword(previousHash, newPassword)),
+  );
   if (previousPasswordMatches.some(Boolean)) {
     throw new AuthorizationError('Please choose a password that has not been used recently');
   }
@@ -50,7 +69,12 @@ export async function updateUserPassword(userId: string, currentPassword: string
   });
   await sessionRepo.revokeAllSessions(userId);
   await tokenRepo.revokeAllUserRefreshTokens(userId);
-  await auditRepo.createAuditLog({ userId, action: 'PASSWORD_CHANGED', entity: 'User', entityId: userId });
+  await auditRepo.createAuditLog({
+    userId,
+    action: 'PASSWORD_CHANGED',
+    entity: 'User',
+    entityId: userId,
+  });
 }
 
 export async function changeUserEmail(userId: string, newEmail: string, currentPassword: string) {
@@ -61,10 +85,19 @@ export async function changeUserEmail(userId: string, newEmail: string, currentP
   const existing = await userRepo.findUserByEmail(newEmail.toLowerCase());
   if (existing && existing.id !== userId) throw new ConflictError('Email already in use');
   await userRepo.updateUser(userId, { email: newEmail.toLowerCase(), emailVerified: null });
-  await auditRepo.createAuditLog({ userId, action: 'EMAIL_CHANGED', entity: 'User', entityId: userId, metadata: { newEmail } });
+  await auditRepo.createAuditLog({
+    userId,
+    action: 'EMAIL_CHANGED',
+    entity: 'User',
+    entityId: userId,
+    metadata: { newEmail },
+  });
 }
 
-export async function updateUserPreferences(userId: string, data: { timezone?: string; language?: string; theme?: string; notificationPreferences?: unknown; }) {
+export async function updateUserPreferences(
+  userId: string,
+  data: { timezone?: string; language?: string; theme?: string; notificationPreferences?: unknown },
+) {
   return userRepo.createUserPreference(userId, data);
 }
 
@@ -80,5 +113,10 @@ export async function deleteUserAccount(userId: string, currentPassword: string)
   await userRepo.softDeleteUser(userId);
   await sessionRepo.revokeAllSessions(userId);
   await tokenRepo.revokeAllUserRefreshTokens(userId);
-  await auditRepo.createAuditLog({ userId, action: 'ACCOUNT_DELETED', entity: 'User', entityId: userId });
+  await auditRepo.createAuditLog({
+    userId,
+    action: 'ACCOUNT_DELETED',
+    entity: 'User',
+    entityId: userId,
+  });
 }

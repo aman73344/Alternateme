@@ -22,7 +22,8 @@ export class KnowledgeStatusService {
       where: { id: alternateId, userId, deletedAt: null },
       select: { id: true },
     });
-    if (!alternate) throw new KnowledgeError('SOURCE_NOT_FOUND', { alternateId }, 'Alternate not found');
+    if (!alternate)
+      throw new KnowledgeError('SOURCE_NOT_FOUND', { alternateId }, 'Alternate not found');
 
     const groups = await prisma.trainingSource.groupBy({
       by: ['status'],
@@ -33,8 +34,7 @@ export class KnowledgeStatusService {
     for (const g of groups) statusCount[g.status] = g._count._all;
 
     const readySources = statusCount.READY || 0;
-    const processingSources =
-      (statusCount.PENDING || 0) + (statusCount.PROCESSING || 0);
+    const processingSources = (statusCount.PENDING || 0) + (statusCount.PROCESSING || 0);
 
     const [totalDocuments, totalChunks] = await Promise.all([
       prisma.knowledgeDocument.count({

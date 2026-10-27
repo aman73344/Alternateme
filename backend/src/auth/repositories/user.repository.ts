@@ -40,7 +40,10 @@ export async function updateUser(userId: string, data: any): Promise<User> {
 }
 
 export async function softDeleteUser(userId: string): Promise<User> {
-  return prisma.user.update({ where: { id: userId }, data: { isActive: false, deletedAt: new Date() } });
+  return prisma.user.update({
+    where: { id: userId },
+    data: { isActive: false, deletedAt: new Date() },
+  });
 }
 
 export async function findOrCreateUserPreference(userId: string) {
@@ -51,7 +54,10 @@ export async function findOrCreateUserPreference(userId: string) {
   });
 }
 
-export async function createUserPreference(userId: string, data: { timezone?: string; language?: string; theme?: string; notificationPreferences?: unknown }) {
+export async function createUserPreference(
+  userId: string,
+  data: { timezone?: string; language?: string; theme?: string; notificationPreferences?: unknown },
+) {
   return prisma.userPreference.upsert({
     where: { userId },
     create: {

@@ -1,6 +1,6 @@
 /**
  * ContextBuilder — Assembles structured context for the LLM from retrieved chunks.
- * 
+ *
  * Responsibilities:
  * - Preserve source provenance (source, document, section, page, chunk)
  * - Manage context size (token limits, max chunks, max characters)

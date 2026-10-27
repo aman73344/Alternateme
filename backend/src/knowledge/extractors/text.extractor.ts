@@ -13,7 +13,11 @@ export class TextExtractor implements DocumentExtractor {
 
   async extract(source: ExtractSource): Promise<ExtractionResult> {
     if (!source.buffer) {
-      throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', undefined, 'TXT source is missing its file content');
+      throw new KnowledgeError(
+        'UNSUPPORTED_FILE_TYPE',
+        undefined,
+        'TXT source is missing its file content',
+      );
     }
     // Respect UTF-16 BOMs that browsers/editors sometimes write for .txt files.
     let content: string;

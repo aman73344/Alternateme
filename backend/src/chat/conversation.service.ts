@@ -1,12 +1,12 @@
 /**
  * ConversationService — Manages conversations and messages.
- * 
+ *
  * Responsibilities:
  * - Create and retrieve conversations
  * - Persist user and assistant messages
  * - Retrieve conversation history
  * - Enforce ownership validation
- * 
+ *
  * Uses the existing Conversation and Message models from the Prisma schema.
  */
 
@@ -50,11 +50,14 @@ export class ConversationService {
       },
     });
 
-    logger.info({
-      conversationId: conversation.id,
-      alternateId: input.alternateId,
-      userId: input.userId,
-    }, 'Conversation created');
+    logger.info(
+      {
+        conversationId: conversation.id,
+        alternateId: input.alternateId,
+        userId: input.userId,
+      },
+      'Conversation created',
+    );
 
     return conversation;
   }
@@ -119,7 +122,11 @@ export class ConversationService {
   /**
    * Get recent messages for context window.
    */
-  async getRecentMessages(conversationId: string, userId: string, limit: number = 10): Promise<ChatMessage[]> {
+  async getRecentMessages(
+    conversationId: string,
+    userId: string,
+    limit: number = 10,
+  ): Promise<ChatMessage[]> {
     // Validate ownership first
     await this.getConversation(conversationId, userId);
 

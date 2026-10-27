@@ -22,7 +22,7 @@ import type { ChatRequest, ChatResponse } from '../rag/types';
 import { NotFoundError, AuthorizationError, BusinessError } from '@/utils/errors';
 
 /** Load the persona for an alternate, mapped to PersonaConfig. */
-async function loadPersona(alternateId: string): Promise<PersonaConfig | null> {
+export async function loadPersona(alternateId: string): Promise<PersonaConfig | null> {
   const persona = await prisma.persona.findUnique({
     where: { alternateId },
   });
@@ -71,12 +71,19 @@ function queueMemoryExtraction(params: {
       },
     );
   } catch (err) {
-    logger.warn({ err, conversationId: params.conversationId }, 'Failed to queue memory extraction');
+    logger.warn(
+      { err, conversationId: params.conversationId },
+      'Failed to queue memory extraction',
+    );
   }
 }
 
 export class ChatService {
-  async sendMessage(alternateId: string, userId: string, request: ChatRequest): Promise<ChatResponse> {
+  async sendMessage(
+    alternateId: string,
+    userId: string,
+    request: ChatRequest,
+  ): Promise<ChatResponse> {
     const startTime = Date.now();
 
     // 1. Load + authorize alternate
@@ -116,7 +123,23 @@ export class ChatService {
     const persona = await loadPersona(alternateId);
     const providerConfig = await providerService.getDecryptedApiKey(alternateId, userId);
     if (!providerConfig) {
-      throw new BusinessError('No AI provider configured for this alternate', 'NO_PROVIDER_CONFIGURED');
+      throw new BusinessError(
+        'No AI provider configured for this alternate',
+        'NO_PROVIDER_CONFIGURED',
+      );
+    }
+
+    // 4b. Phase 6 — agent mode. Opt-in per alternate and globally; when either
+    // is off the normal RAG + memory + LLM path below runs unchanged, so chat
+    // keeps working exactly as in Phase 4/5.
+    if (config.agent?.enabled && alternate.agentEnabled) {
+      return this.sendViaAgent({
+        alternateId,
+        userId,
+        conversation,
+        userMessage,
+        startTime,
+      });
     }
 
     // 5. RAG + Memory retrieval in parallel (memory failure must not break chat)
@@ -135,9 +158,7 @@ export class ChatService {
         bio: alternate.bio ?? undefined,
       },
       persona,
-      ragResult.hasRelevantContext
-        ? ragResult.chunks.map((c) => c.content).join('\n\n')
-        : '',
+      ragResult.hasRelevantContext ? ragResult.chunks.map((c) => c.content).join('\n\n') : '',
       recentMessages,
       request.message,
       memoryContext ?? undefined,
@@ -215,13 +236,78 @@ export class ChatService {
   }
 
   /**
+   * Phase 6 — route a chat turn through the agent orchestrator.
+   *
+   * The existing ChatService owns conversation persistence: the user message is
+   * already stored, and the agent's reply is persisted through the same
+   * `conversationService`. On failure the conversation is left intact and the
+   * user receives a safe message rather than an error page.
+   */
+  private async sendViaAgent(params: {
+    alternateId: string;
+    userId: string;
+    conversation: { id: string };
+    userMessage: { id: string; content: string };
+    startTime: number;
+  }): Promise<ChatResponse> {
+    const { alternateId, userId, conversation, userMessage, startTime } = params;
+
+    // Lazy import keeps the agent module (and its tool registry) out of the
+    // normal chat boot path entirely.
+    const { agentOrchestrator } = await import('@/agent/orchestration/orchestrator.service');
+
+    let content: string;
+    let sources: Array<{ title: string; url?: string; page?: number }> = [];
+
+    try {
+      const result = await agentOrchestrator.run({
+        alternateId,
+        userId,
+        goal: userMessage.content,
+        conversationId: conversation.id,
+      });
+      content = result.content;
+      sources = result.sources;
+    } catch (err) {
+      // Failure isolation: the user message stays saved and the run is recorded
+      // as failed. The user gets a safe, non-technical explanation.
+      logger.error({ err, alternateId, conversationId: conversation.id }, 'agent.chat.failed');
+      content = 'I hit a problem while working on that. Your message was saved — please try again.';
+    }
+
+    const assistantMessage = await conversationService.addMessage({
+      conversationId: conversation.id,
+      role: 'ASSISTANT',
+      content,
+      latencyMs: Date.now() - startTime,
+      sources,
+    });
+
+    queueMemoryExtraction({
+      conversationId: conversation.id,
+      messageId: userMessage.id,
+      alternateId,
+      userId,
+      messageContent: userMessage.content,
+    });
+
+    return {
+      conversationId: conversation.id,
+      message: {
+        id: assistantMessage.id,
+        role: 'ASSISTANT',
+        content,
+        createdAt: assistantMessage.createdAt,
+      },
+      sources,
+    };
+  }
+
+  /**
    * Retrieve formatted memory context for the prompt.
    * Owner-only personal context; failures are swallowed (memory is an enhancement).
    */
-  private async retrieveMemoryContext(
-    query: string,
-    alternateId: string,
-  ): Promise<string | null> {
+  private async retrieveMemoryContext(query: string, alternateId: string): Promise<string | null> {
     try {
       if (config.memory?.enabled === false) return null;
       const alternate = await prisma.alternate.findUnique({
@@ -249,11 +335,7 @@ export class ChatService {
    * Debug the RAG + Memory pipeline for a query (development only).
    * Returns safe diagnostics — never API keys, vectors, or full private content.
    */
-  async debugRetrieval(
-    alternateId: string,
-    userId: string,
-    query: string,
-  ) {
+  async debugRetrieval(alternateId: string, userId: string, query: string) {
     // Ownership check
     const alternate = await prisma.alternate.findFirst({
       where: { id: alternateId, userId, deletedAt: null },

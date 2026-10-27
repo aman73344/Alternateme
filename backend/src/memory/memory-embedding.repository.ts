@@ -39,7 +39,10 @@ export async function upsertMemoryEmbedding(
   const safeModel = model.replace(/'/g, '');
 
   // Only allow embedding for ACTIVE memories
-  const memCheck = await prisma.memory.findUnique({ where: { id: memoryId, alternateId, userId, status: { in: ['ACTIVE', 'SUPERSEDED'] } }, select: { id: true } });
+  const memCheck = await prisma.memory.findUnique({
+    where: { id: memoryId, alternateId, userId, status: { in: ['ACTIVE', 'SUPERSEDED'] } },
+    select: { id: true },
+  });
   if (!memCheck) return null;
 
   type ResultRow = {

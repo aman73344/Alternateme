@@ -31,13 +31,24 @@ export function createKnowledgeIngestionWorker(): Worker {
       try {
         const outcome = await knowledgeIngestionService.ingest(data);
         logger.info(
-          { jobId: job.id, sourceId: data.sourceId, version: outcome.version, chunkCount: outcome.chunkCount, durationMs: Date.now() - started },
+          {
+            jobId: job.id,
+            sourceId: data.sourceId,
+            version: outcome.version,
+            chunkCount: outcome.chunkCount,
+            durationMs: Date.now() - started,
+          },
           'Knowledge ingestion job completed',
         );
         return outcome;
       } catch (err) {
         logger.error(
-          { jobId: job.id, sourceId: data.sourceId, err: err instanceof Error ? { message: err.message } : err, durationMs: Date.now() - started },
+          {
+            jobId: job.id,
+            sourceId: data.sourceId,
+            err: err instanceof Error ? { message: err.message } : err,
+            durationMs: Date.now() - started,
+          },
           'Knowledge ingestion job failed',
         );
         throw err; // BullMQ drives retry policy
@@ -46,7 +57,9 @@ export function createKnowledgeIngestionWorker(): Worker {
     { connection, concurrency: config.queue.concurrency },
   );
 
-  worker.on('completed', (job) => logger.info({ jobId: job.id }, 'Knowledge ingestion worker completed'));
+  worker.on('completed', (job) =>
+    logger.info({ jobId: job.id }, 'Knowledge ingestion worker completed'),
+  );
   worker.on('failed', (job, err) =>
     logger.error({ jobId: job?.id, err: err?.message }, 'Knowledge ingestion worker failed'),
   );

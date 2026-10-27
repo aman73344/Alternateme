@@ -9,14 +9,17 @@ type Alternate = Awaited<ReturnType<typeof prisma.alternate.create>>;
 type AlternateVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 
 export const alternateService = {
-  createAlternate: async (userId: string, data: {
-    username: string;
-    displayName: string;
-    title?: string;
-    bio?: string;
-    avatarUrl?: string;
-    visibility?: AlternateVisibility;
-  }): Promise<Alternate> => {
+  createAlternate: async (
+    userId: string,
+    data: {
+      username: string;
+      displayName: string;
+      title?: string;
+      bio?: string;
+      avatarUrl?: string;
+      visibility?: AlternateVisibility;
+    },
+  ): Promise<Alternate> => {
     const normalizedUsername = data.username.toLowerCase().trim();
 
     if (RESERVED_USERNAMES.includes(normalizedUsername)) {
@@ -53,7 +56,10 @@ export const alternateService = {
       newValue: { username: alternate.username, displayName: alternate.displayName },
     });
 
-    logger.info({ userId, alternateId: alternate.id, username: alternate.username }, 'Alternate created');
+    logger.info(
+      { userId, alternateId: alternate.id, username: alternate.username },
+      'Alternate created',
+    );
 
     return alternate;
   },
@@ -63,10 +69,7 @@ export const alternateService = {
       where: {
         id,
         deletedAt: null,
-        OR: [
-          { userId: requesterId },
-          { visibility: 'PUBLIC', status: 'PUBLISHED' },
-        ],
+        OR: [{ userId: requesterId }, { visibility: 'PUBLIC', status: 'PUBLISHED' }],
       },
     });
 
@@ -90,7 +93,10 @@ export const alternateService = {
     });
   },
 
-  getAlternatesByUserId: async (userId: string, options?: { skip?: number; take?: number }): Promise<Alternate[]> => {
+  getAlternatesByUserId: async (
+    userId: string,
+    options?: { skip?: number; take?: number },
+  ): Promise<Alternate[]> => {
     return prisma.alternate.findMany({
       where: { userId, deletedAt: null },
       skip: options?.skip ?? 0,
@@ -99,7 +105,11 @@ export const alternateService = {
     });
   },
 
-  updateAlternate: async (id: string, userId: string, data: Partial<Alternate>): Promise<Alternate> => {
+  updateAlternate: async (
+    id: string,
+    userId: string,
+    data: Partial<Alternate>,
+  ): Promise<Alternate> => {
     const existing = await prisma.alternate.findFirst({
       where: { id, userId, deletedAt: null },
     });
@@ -163,7 +173,10 @@ export const alternateService = {
     });
   },
 
-  checkUsernameAvailability: async (username: string, excludeId?: string): Promise<{ username: string; available: boolean }> => {
+  checkUsernameAvailability: async (
+    username: string,
+    excludeId?: string,
+  ): Promise<{ username: string; available: boolean }> => {
     const normalizedUsername = username.toLowerCase().trim();
 
     // Reserved usernames are never available

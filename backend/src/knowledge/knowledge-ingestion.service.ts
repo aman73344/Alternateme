@@ -71,7 +71,13 @@ export class KnowledgeIngestionService {
 
     if (extraction.ocrRequired) {
       await this.fail(sourceId, jobId, 'OCR_REQUIRED');
-      return { documentId: '', version: nextVersion, chunkCount: 0, checksum: '', ocrRequired: true };
+      return {
+        documentId: '',
+        version: nextVersion,
+        chunkCount: 0,
+        checksum: '',
+        ocrRequired: true,
+      };
     }
 
     await Promise.all([
@@ -92,7 +98,10 @@ export class KnowledgeIngestionService {
       const active = await knowledgeVersioningRepository.getActiveVersion(sourceId);
       if (active && active.checksum === checksum) {
         logger.info({ sourceId, version: active.version }, 'Content unchanged; skipping reprocess');
-        await knowledgeRepository.markJobCompleted(jobId, { skipped: true, version: active.version });
+        await knowledgeRepository.markJobCompleted(jobId, {
+          skipped: true,
+          version: active.version,
+        });
         await knowledgeSourceRepository.markSourceReady(sourceId, {
           version: active.version,
           chunkCount: active.chunkCount,
@@ -233,7 +242,10 @@ export class KnowledgeIngestionService {
       documentId: document.id,
     });
 
-    logger.info({ jobId, sourceId, version: nextVersion, chunks: chunks.length }, 'Knowledge ingestion completed');
+    logger.info(
+      { jobId, sourceId, version: nextVersion, chunks: chunks.length },
+      'Knowledge ingestion completed',
+    );
     return { documentId: document.id, version: nextVersion, chunkCount: chunks.length, checksum };
   }
 
@@ -252,7 +264,11 @@ export class KnowledgeIngestionService {
     registerExtractors();
     const extractor = extractorRegistry.resolve(extractSource);
     if (!extractor) {
-      throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', undefined, 'No extractor matched this source');
+      throw new KnowledgeError(
+        'UNSUPPORTED_FILE_TYPE',
+        undefined,
+        'No extractor matched this source',
+      );
     }
     return extractor.extract(extractSource);
   }

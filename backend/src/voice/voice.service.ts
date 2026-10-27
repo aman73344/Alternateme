@@ -65,6 +65,9 @@ export const voiceService = {
       metadata: { provider: data.provider, type: data.type },
     });
 
-    logger.info({ userId, alternateId: data.alternateId, provider: data.provider }, 'Voice profile saved');
+    logger.info(
+      { userId, alternateId: data.alternateId, provider: data.provider },
+      'Voice profile saved',
+    );
   },
 };

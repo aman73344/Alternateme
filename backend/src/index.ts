@@ -7,13 +7,16 @@ import { closeAllQueues } from '@/queues';
 validateEnv();
 
 const server = app.listen(config.app.port, () => {
-  logger.info({
-    port: config.app.port,
-    env: config.app.nodeEnv,
-    apiPrefix: config.app.apiPrefix,
-    url: `${config.app.url}${config.app.apiPrefix}`,
-    docs: `${config.app.url}/docs`,
-  }, 'Server started');
+  logger.info(
+    {
+      port: config.app.port,
+      env: config.app.nodeEnv,
+      apiPrefix: config.app.apiPrefix,
+      url: `${config.app.url}${config.app.apiPrefix}`,
+      docs: `${config.app.url}/docs`,
+    },
+    'Server started',
+  );
 });
 
 process.on('SIGTERM', async () => {

@@ -5,11 +5,24 @@
 import { z } from 'zod';
 
 export const MemoryTypeSchema = z.enum([
-  'FACT', 'PREFERENCE', 'PERSONAL_CONTEXT', 'GOAL', 'DECISION',
-  'INSTRUCTION', 'RELATIONSHIP', 'PROJECT_CONTEXT', 'CONVERSATION_SUMMARY',
+  'FACT',
+  'PREFERENCE',
+  'PERSONAL_CONTEXT',
+  'GOAL',
+  'DECISION',
+  'INSTRUCTION',
+  'RELATIONSHIP',
+  'PROJECT_CONTEXT',
+  'CONVERSATION_SUMMARY',
 ]);
 
-export const MemoryStatusSchema = z.enum(['ACTIVE', 'ARCHIVED', 'DELETED', 'EXPIRED', 'SUPERSEDED']);
+export const MemoryStatusSchema = z.enum([
+  'ACTIVE',
+  'ARCHIVED',
+  'DELETED',
+  'EXPIRED',
+  'SUPERSEDED',
+]);
 export const MemoryVisibilitySchema = z.enum(['PRIVATE', 'ALTERNATE']);
 export const MemorySourceTypeSchema = z.enum(['EXPLICIT', 'INFERRED', 'ASSOCIATED']);
 

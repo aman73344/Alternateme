@@ -18,7 +18,11 @@ async function api(method: string, path: string, body?: any, token?: string): Pr
     body: body ? JSON.stringify(body) : undefined,
   });
   let data = null;
-  try { data = await res.json(); } catch {}
+  try {
+    data = await res.json();
+  } catch {
+    // Response body was not JSON; leave as null for assertions.
+  }
   return { status: res.status, data };
 }
 
@@ -59,7 +63,10 @@ describe('Onboarding Flow Integration Tests', () => {
     });
 
     it('rejects login with unverified email', async () => {
-      const res = await api('POST', '/auth/login', { email: userA.email, password: userA.password });
+      const res = await api('POST', '/auth/login', {
+        email: userA.email,
+        password: userA.password,
+      });
       expect(res.status).toBe(403);
     });
 
@@ -73,30 +80,45 @@ describe('Onboarding Flow Integration Tests', () => {
   // Test 2: Create Alternate
   describe('Alternate Creation', () => {
     it('starts onboarding and creates alternate', async () => {
-      const res = await api('POST', '/onboarding/start', {
-        username: `alt_${suffix}`,
-        displayName: 'Test Alternate',
-        title: 'Software Engineer',
-        bio: 'Test bio',
-      }, tokenA);
+      const res = await api(
+        'POST',
+        '/onboarding/start',
+        {
+          username: `alt_${suffix}`,
+          displayName: 'Test Alternate',
+          title: 'Software Engineer',
+          bio: 'Test bio',
+        },
+        tokenA,
+      );
       expect(res.status).toBe(201);
       expect(res.data.data.alternateId).toBeDefined();
       alternateId = res.data.data.alternateId;
     });
 
     it('rejects duplicate username', async () => {
-      const res = await api('POST', '/onboarding/start', {
-        username: `alt_${suffix}`,
-        displayName: 'Duplicate',
-      }, tokenB);
+      const res = await api(
+        'POST',
+        '/onboarding/start',
+        {
+          username: `alt_${suffix}`,
+          displayName: 'Duplicate',
+        },
+        tokenB,
+      );
       expect(res.status).toBe(409);
     });
 
     it('rejects reserved username', async () => {
-      const res = await api('POST', '/onboarding/start', {
-        username: 'admin',
-        displayName: 'Admin',
-      }, tokenB);
+      const res = await api(
+        'POST',
+        '/onboarding/start',
+        {
+          username: 'admin',
+          displayName: 'Admin',
+        },
+        tokenB,
+      );
       expect(res.status).toBe(409);
     });
   });
@@ -110,13 +132,18 @@ describe('Onboarding Flow Integration Tests', () => {
     });
 
     it('saves personal info', async () => {
-      const res = await api('POST', '/onboarding/personal', {
-        alternateId,
-        displayName: 'Updated Name',
-        title: 'Senior Engineer',
-        bio: 'Updated bio',
-        username: `alt_${suffix}`,
-      }, tokenA);
+      const res = await api(
+        'POST',
+        '/onboarding/personal',
+        {
+          alternateId,
+          displayName: 'Updated Name',
+          title: 'Senior Engineer',
+          bio: 'Updated bio',
+          username: `alt_${suffix}`,
+        },
+        tokenA,
+      );
       expect(res.status).toBe(200);
     });
 
@@ -129,23 +156,33 @@ describe('Onboarding Flow Integration Tests', () => {
   // Test 4: Persona
   describe('Persona', () => {
     it('saves persona', async () => {
-      const res = await api('PUT', '/onboarding/persona', {
-        alternateId,
-        tone: 'Professional',
-        writingStyle: 'Clear',
-        personality: 'Friendly',
-        instructions: 'Be polite',
-        boundaries: 'No personal data',
-      }, tokenA);
+      const res = await api(
+        'PUT',
+        '/onboarding/persona',
+        {
+          alternateId,
+          tone: 'Professional',
+          writingStyle: 'Clear',
+          personality: 'Friendly',
+          instructions: 'Be polite',
+          boundaries: 'No personal data',
+        },
+        tokenA,
+      );
       expect(res.status).toBe(200);
     });
 
     it('upserts persona (no duplicates)', async () => {
-      const res = await api('PUT', '/onboarding/persona', {
-        alternateId,
-        tone: 'Casual',
-        writingStyle: 'Concise',
-      }, tokenA);
+      const res = await api(
+        'PUT',
+        '/onboarding/persona',
+        {
+          alternateId,
+          tone: 'Casual',
+          writingStyle: 'Concise',
+        },
+        tokenA,
+      );
       expect(res.status).toBe(200);
 
       const count = await prisma.persona.count({ where: { alternateId } });
@@ -156,29 +193,44 @@ describe('Onboarding Flow Integration Tests', () => {
   // Test 5: Source
   describe('Training Sources', () => {
     it('creates a URL source', async () => {
-      const res = await api('POST', '/onboarding/sources', {
-        alternateId,
-        type: 'URL',
-        name: 'Test Website',
-        url: 'https://example.com',
-      }, tokenA);
+      const res = await api(
+        'POST',
+        '/onboarding/sources',
+        {
+          alternateId,
+          type: 'URL',
+          name: 'Test Website',
+          url: 'https://example.com',
+        },
+        tokenA,
+      );
       expect(res.status).toBe(201);
       expect(res.data.data.sourceId).toBeDefined();
       sourceId = res.data.data.sourceId;
     });
 
     it('rejects SSRF-unsafe URL', async () => {
-      const res = await api('POST', '/onboarding/sources', {
-        alternateId,
-        type: 'URL',
-        name: 'Bad URL',
-        url: 'http://169.254.169.254/latest/meta-data/',
-      }, tokenA);
+      const res = await api(
+        'POST',
+        '/onboarding/sources',
+        {
+          alternateId,
+          type: 'URL',
+          name: 'Bad URL',
+          url: 'http://169.254.169.254/latest/meta-data/',
+        },
+        tokenA,
+      );
       expect(res.status).toBe(400);
     });
 
     it('deletes a source', async () => {
-      const res = await api('DELETE', `/alternates/${alternateId}/sources/${sourceId}`, null, tokenA);
+      const res = await api(
+        'DELETE',
+        `/alternates/${alternateId}/sources/${sourceId}`,
+        null,
+        tokenA,
+      );
       expect(res.status).toBe(204);
     });
   });
@@ -186,37 +238,52 @@ describe('Onboarding Flow Integration Tests', () => {
   // Test 6: Voice
   describe('Voice Profile', () => {
     it('saves provider voice', async () => {
-      const res = await api('PUT', '/onboarding/voice', {
-        alternateId,
-        provider: 'ELEVENLABS',
-        voiceId: 'test-voice-1',
-        name: 'Test Voice',
-        type: 'PROVIDER_VOICE',
-      }, tokenA);
+      const res = await api(
+        'PUT',
+        '/onboarding/voice',
+        {
+          alternateId,
+          provider: 'ELEVENLABS',
+          voiceId: 'test-voice-1',
+          name: 'Test Voice',
+          type: 'PROVIDER_VOICE',
+        },
+        tokenA,
+      );
       expect(res.status).toBe(200);
     });
 
     it('rejects voice cloning without consent', async () => {
-      const res = await api('PUT', '/onboarding/voice', {
-        alternateId,
-        provider: 'ELEVENLABS',
-        voiceId: 'test-voice-2',
-        name: 'Cloned Voice',
-        type: 'CLONED_VOICE',
-        consent: false,
-      }, tokenA);
+      const res = await api(
+        'PUT',
+        '/onboarding/voice',
+        {
+          alternateId,
+          provider: 'ELEVENLABS',
+          voiceId: 'test-voice-2',
+          name: 'Cloned Voice',
+          type: 'CLONED_VOICE',
+          consent: false,
+        },
+        tokenA,
+      );
       expect(res.status).toBe(400);
     });
 
     it('accepts voice cloning with consent', async () => {
-      const res = await api('PUT', '/onboarding/voice', {
-        alternateId,
-        provider: 'ELEVENLABS',
-        voiceId: 'test-voice-3',
-        name: 'Cloned Voice',
-        type: 'CLONED_VOICE',
-        consent: true,
-      }, tokenA);
+      const res = await api(
+        'PUT',
+        '/onboarding/voice',
+        {
+          alternateId,
+          provider: 'ELEVENLABS',
+          voiceId: 'test-voice-3',
+          name: 'Cloned Voice',
+          type: 'CLONED_VOICE',
+          consent: true,
+        },
+        tokenA,
+      );
       expect(res.status).toBe(200);
 
       const profile = await prisma.voiceProfile.findUnique({ where: { alternateId } });
@@ -228,13 +295,18 @@ describe('Onboarding Flow Integration Tests', () => {
   // Test 7: AI Provider
   describe('AI Provider', () => {
     it('saves AI provider with encrypted key', async () => {
-      const res = await api('PUT', '/onboarding/ai-provider', {
-        alternateId,
-        provider: 'OPENAI',
-        apiKey: 'test-key-do-not-use',
-        keyLabel: 'Test Key',
-        defaultModel: 'gpt-4o',
-      }, tokenA);
+      const res = await api(
+        'PUT',
+        '/onboarding/ai-provider',
+        {
+          alternateId,
+          provider: 'OPENAI',
+          apiKey: 'test-key-do-not-use',
+          keyLabel: 'Test Key',
+          defaultModel: 'gpt-4o',
+        },
+        tokenA,
+      );
       expect(res.status).toBe(200);
       // Key is stored encrypted and marked PENDING — live validation is
       // deferred (Phase 5 / BYOK management), so onboarding never claims VALID.
@@ -370,7 +442,13 @@ describe('Onboarding Flow Integration Tests', () => {
     it('persists all onboarding data', async () => {
       const alternate = await prisma.alternate.findUnique({
         where: { id: alternateId },
-        include: { persona: true, voiceProfile: true, aiProvider: true, sources: true, onboarding: true },
+        include: {
+          persona: true,
+          voiceProfile: true,
+          aiProvider: true,
+          sources: true,
+          onboarding: true,
+        },
       });
       expect(alternate).toBeDefined();
       expect(alternate?.persona).toBeDefined();

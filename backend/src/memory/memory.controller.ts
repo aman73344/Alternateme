@@ -57,7 +57,9 @@ export async function listMemories(req: Request, res: Response, next: NextFuncti
         },
       },
     });
-    } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** GET /alternates/:alternateId/memories/:memoryId â€” get single memory */
@@ -68,56 +70,90 @@ export async function getMemory(req: Request, res: Response, next: NextFunction)
     const memory = await memoryService.getMemory(memoryId, alternateId, userId);
     if (!memory) throw new NotFoundError('Memory not found');
     res.json({ success: true, data: formatMemoryForResponse(memory) });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** PUT /alternates/:alternateId/memories/:memoryId â€” update memory */
-export async function updateMemoryEndpoint(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function updateMemoryEndpoint(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { alternateId, memoryId } = req.params;
     const userId = req.authUser!.id;
     const { content, importance, confidence, status, visibility, expiresAt } = req.body;
 
     const memory = await memoryService.updateMemory(memoryId, alternateId, userId, {
-      content, importance, confidence, status, visibility,
+      content,
+      importance,
+      confidence,
+      status,
+      visibility,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
     });
     res.json({ success: true, data: formatMemoryForResponse(memory) });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** DELETE /alternates/:alternateId/memories/:memoryId â€” delete memory */
-export async function deleteMemoryEndpoint(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function deleteMemoryEndpoint(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { alternateId, memoryId } = req.params;
     const userId = req.authUser!.id;
     await memoryService.deleteMemory(memoryId, alternateId, userId);
     res.json({ success: true, data: { message: 'Memory deleted' } });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** POST /alternates/:alternateId/memories/:memoryId/confirm */
-export async function confirmMemory(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function confirmMemory(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { alternateId, memoryId } = req.params;
     const userId = req.authUser!.id;
     const memory = await memoryService.confirmMemory(memoryId, alternateId, userId);
     res.json({ success: true, data: formatMemoryForResponse(memory) });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** POST /alternates/:alternateId/memories/:memoryId/archive */
-export async function archiveMemory(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function archiveMemory(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { alternateId, memoryId } = req.params;
     const userId = req.authUser!.id;
     const memory = await memoryService.archiveMemory(memoryId, alternateId, userId);
     res.json({ success: true, data: formatMemoryForResponse(memory) });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** POST /alternates/:alternateId/memories/forget â€” forget by content */
-export async function forgetMemoryByContent(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function forgetMemoryByContent(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { alternateId } = req.params;
     const userId = req.authUser!.id;
@@ -132,6 +168,7 @@ export async function forgetMemoryByContent(req: Request, res: Response, next: N
 
     await memoryService.forgetMemory(memory.id, alternateId, userId);
     res.json({ success: true, data: { message: 'Memory forgotten', memoryId: memory.id } });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
-

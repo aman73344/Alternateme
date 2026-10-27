@@ -85,15 +85,13 @@ describe('Chat Service - Conversations', () => {
       userId: testUserId,
     });
 
-    await expect(
-      conversationService.getConversation(created.id, otherUserId)
-    ).rejects.toThrow();
+    await expect(conversationService.getConversation(created.id, otherUserId)).rejects.toThrow();
   });
 
   it('should list conversations for an alternate', async () => {
     const conversations = await conversationService.getConversationsByAlternate(
       testAlternateId,
-      testUserId
+      testUserId,
     );
 
     expect(conversations.length).toBeGreaterThan(0);
@@ -107,9 +105,7 @@ describe('Chat Service - Conversations', () => {
 
     await conversationService.deleteConversation(created.id, testUserId);
 
-    await expect(
-      conversationService.getConversation(created.id, testUserId)
-    ).rejects.toThrow();
+    await expect(conversationService.getConversation(created.id, testUserId)).rejects.toThrow();
   });
 
   it('should add and retrieve messages', async () => {

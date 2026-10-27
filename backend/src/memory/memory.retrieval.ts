@@ -11,12 +11,7 @@
 
 import { logger } from '@/utils/logger';
 import { EmbeddingService } from '@/knowledge/embedding/embedding.service';
-import {
-  MemorySearchParams,
-  MemoryRetrievalResult,
-  Memory,
-  MemoryType,
-} from './memory.types';
+import { MemorySearchParams, MemoryRetrievalResult, Memory, MemoryType } from './memory.types';
 import { retrieveByVector } from './memory.repository.vector';
 import { searchMemories, updateAccessTimestamps } from './memory.repository.search';
 import { rankMemories } from './memory.ranker';
@@ -59,7 +54,10 @@ export class MemoryRetrievalService {
       try {
         queryEmbedding = (await embeddingService.embed([queryText])).vectors[0];
       } catch (err) {
-        logger.warn({ err, alternateId }, 'Failed to generate embedding for memory retrieval query');
+        logger.warn(
+          { err, alternateId },
+          'Failed to generate embedding for memory retrieval query',
+        );
       }
     }
 
@@ -142,7 +140,7 @@ export class MemoryRetrievalService {
     params: { limit?: number; includePrivate?: boolean; types?: MemoryType[] },
   ): Promise<Array<Memory & { similarity: number }>> {
     // Use the database text search
-        const results = await searchMemories({
+    const results = await searchMemories({
       alternateId,
       userId,
       search: query,

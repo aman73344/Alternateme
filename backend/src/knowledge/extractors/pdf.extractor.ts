@@ -21,7 +21,11 @@ export class PdfExtractor implements DocumentExtractor {
 
   async extract(source: ExtractSource): Promise<ExtractionResult> {
     if (!source.buffer) {
-      throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', undefined, 'PDF source is missing its file content');
+      throw new KnowledgeError(
+        'UNSUPPORTED_FILE_TYPE',
+        undefined,
+        'PDF source is missing its file content',
+      );
     }
 
     let parser: PDFParse | undefined;

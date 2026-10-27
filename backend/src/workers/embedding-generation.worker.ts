@@ -28,7 +28,10 @@ export function createEmbeddingGenerationWorker(): Worker {
     async (job) => {
       const data = job.data as EmbeddingGenerationJobData;
       logger.info({ jobId: job.id, documentId: data.documentId }, 'Embedding generation started');
-      const chunks = await knowledgeChunkRepository.getChunksForDocument(data.documentId, data.version);
+      const chunks = await knowledgeChunkRepository.getChunksForDocument(
+        data.documentId,
+        data.version,
+      );
       if (chunks.length === 0) return { embedded: 0 };
       const service = new EmbeddingService({});
       const { vectors } = await service.embed(chunks.map((c) => c.content));
@@ -36,6 +39,8 @@ export function createEmbeddingGenerationWorker(): Worker {
     },
     { connection, concurrency: config.queue.concurrency },
   );
-  worker.on('failed', (job, err) => logger.error({ jobId: job?.id, err: err?.message }, 'Embedding generation failed'));
+  worker.on('failed', (job, err) =>
+    logger.error({ jobId: job?.id, err: err?.message }, 'Embedding generation failed'),
+  );
   return worker;
 }

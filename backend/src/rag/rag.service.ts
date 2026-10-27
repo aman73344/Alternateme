@@ -1,6 +1,6 @@
 /**
  * RagService — Core retrieval orchestration for the RAG pipeline.
- * 
+ *
  * Responsibilities:
  * - Receive user query
  * - Validate Alternate ownership/access
@@ -10,7 +10,7 @@
  * - Rank candidates
  * - Build context
  * - Return retrieval result
- * 
+ *
  * This service orchestrates the flow:
  * Query → Embedding → Vector Search → Filtering → Reranking → Context Assembly
  */
@@ -21,11 +21,7 @@ import { EmbeddingService } from '@/knowledge/embedding/embedding.service';
 import { vectorRepository } from './vector.repository';
 import { reranker } from './reranker';
 import { contextBuilder } from './context-builder';
-import type {
-  RetrievalResult,
-  RagConfig,
-  VectorSearchParams,
-} from './types';
+import type { RetrievalResult, RagConfig, VectorSearchParams } from './types';
 
 export class RagService {
   private embeddingService: EmbeddingService;
@@ -46,7 +42,7 @@ export class RagService {
 
   /**
    * Execute the full RAG retrieval pipeline.
-   * 
+   *
    * @param query - The user's question
    * @param alternateId - The Alternate ID (validated for ownership)
    * @param userId - The authenticated user ID
@@ -63,7 +59,7 @@ export class RagService {
       sourceType?: string;
       language?: string;
       knowledgeVersion?: number;
-    }
+    },
   ): Promise<RetrievalResult> {
     const startTime = Date.now();
 
@@ -74,8 +70,9 @@ export class RagService {
     const queryEmbedding = await this.generateQueryEmbedding(normalizedQuery);
 
     // Get the active knowledge version if not specified
-    const knowledgeVersion = options?.knowledgeVersion ?? 
-      await vectorRepository.getActiveKnowledgeVersion(alternateId) ?? 
+    const knowledgeVersion =
+      options?.knowledgeVersion ??
+      (await vectorRepository.getActiveKnowledgeVersion(alternateId)) ??
       undefined;
 
     // Build search parameters with multi-tenant filtering
@@ -107,7 +104,8 @@ export class RagService {
     const latencyMs = Date.now() - startTime;
 
     // Determine if we have relevant context
-    const hasRelevantContext = finalChunks.length > 0 && 
+    const hasRelevantContext =
+      finalChunks.length > 0 &&
       finalChunks.some((c) => c.similarity >= this.ragConfig.minSimilarity);
 
     const result: RetrievalResult = {
@@ -121,15 +119,18 @@ export class RagService {
       latencyMs,
     };
 
-    logger.info({
-      alternateId,
-      userId,
-      query: normalizedQuery,
-      candidateCount: candidates.length,
-      finalCount: finalChunks.length,
-      hasRelevantContext,
-      latencyMs,
-    }, 'RAG retrieval completed');
+    logger.info(
+      {
+        alternateId,
+        userId,
+        query: normalizedQuery,
+        candidateCount: candidates.length,
+        finalCount: finalChunks.length,
+        hasRelevantContext,
+        latencyMs,
+      },
+      'RAG retrieval completed',
+    );
 
     return result;
   }
@@ -139,7 +140,7 @@ export class RagService {
    */
   private async generateQueryEmbedding(query: string): Promise<number[]> {
     const result = await this.embeddingService.embed([query]);
-    
+
     if (result.vectors.length === 0) {
       throw new Error('Failed to generate query embedding');
     }
@@ -149,7 +150,7 @@ export class RagService {
     // Validate embedding dimensions match stored vectors
     if (embedding.length !== this.ragConfig.embeddingDimensions) {
       throw new Error(
-        `Query embedding dimension mismatch: got ${embedding.length}, expected ${this.ragConfig.embeddingDimensions}`
+        `Query embedding dimension mismatch: got ${embedding.length}, expected ${this.ragConfig.embeddingDimensions}`,
       );
     }
 

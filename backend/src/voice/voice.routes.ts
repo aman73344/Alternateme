@@ -10,8 +10,16 @@ const router: import('express').Router = Router();
 
 router.use(authenticate);
 
-router.get('/providers', asyncHandler((req, res) => voiceController.getProviders(req, res)));
+router.get(
+  '/providers',
+  asyncHandler((req, res) => voiceController.getProviders(req, res)),
+);
 
-router.put('/alternates/:alternateId/voice', requireAlternateOwnership, validate(voiceSchema), asyncHandler((req, res) => voiceController.saveVoice(req, res)));
+router.put(
+  '/alternates/:alternateId/voice',
+  requireAlternateOwnership,
+  validate(voiceSchema),
+  asyncHandler((req, res) => voiceController.saveVoice(req, res)),
+);
 
 export { router as voiceRouter };

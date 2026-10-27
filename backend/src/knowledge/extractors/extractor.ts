@@ -39,11 +39,7 @@ export function isDocxSource(source: ExtractSource): boolean {
 export function isPlainTextSource(source: ExtractSource): boolean {
   const mime = (source.mimeType || '').toLowerCase();
   const name = (source.fileName || source.name || '').toLowerCase();
-  return (
-    mime.startsWith('text/plain') ||
-    name.endsWith('.txt') ||
-    name.endsWith('.text')
-  );
+  return mime.startsWith('text/plain') || name.endsWith('.txt') || name.endsWith('.text');
 }
 
 export function isMarkdownSource(source: ExtractSource): boolean {
@@ -61,9 +57,16 @@ export function isMarkdownSource(source: ExtractSource): boolean {
 export function isHtmlSource(source: ExtractSource): boolean {
   const mime = (source.mimeType || '').toLowerCase();
   const name = (source.fileName || source.name || '').toLowerCase();
-  return mime.includes('html') || mime.includes('xhtml') || name.endsWith('.html') || name.endsWith('.htm');
+  return (
+    mime.includes('html') ||
+    mime.includes('xhtml') ||
+    name.endsWith('.html') ||
+    name.endsWith('.htm')
+  );
 }
 
 export function isYoutubeSource(source: ExtractSource): boolean {
-  return source.type === 'YOUTUBE' || (!!source.url && /(youtube\.com|youtu\.be)/i.test(source.url));
+  return (
+    source.type === 'YOUTUBE' || (!!source.url && /(youtube\.com|youtu\.be)/i.test(source.url))
+  );
 }

@@ -11,6 +11,7 @@ import { createKnowledgeRetryWorker } from './knowledge-retry.worker';
 import { createMemoryExtractionWorker } from './memory-extraction.worker';
 import { createMemoryEmbeddingWorker } from './memory-embedding.worker';
 import { createConversationSummaryWorker } from './conversation-summary.worker';
+import { createAgentWorker } from './agent.worker';
 
 const connection: ConnectionOptions = {
   url: config.redis.url,
@@ -18,10 +19,14 @@ const connection: ConnectionOptions = {
 };
 
 function createWorker(name: QueueName, processor: (job: unknown) => Promise<void>): Worker {
-  const worker = new Worker(name, async (job) => {
-    logger.info({ jobId: job.id, queue: name, data: job.data }, 'Processing job');
-    await processor(job);
-  }, { connection, concurrency: config.queue.concurrency });
+  const worker = new Worker(
+    name,
+    async (job) => {
+      logger.info({ jobId: job.id, queue: name, data: job.data }, 'Processing job');
+      await processor(job);
+    },
+    { connection, concurrency: config.queue.concurrency },
+  );
 
   worker.on('completed', (job) => {
     logger.info({ jobId: job.id, queue: name }, 'Job completed');
@@ -43,7 +48,7 @@ export async function startWorkers(): Promise<void> {
     createWorker(QueueName.VOICE, async () => {}),
     createWorker(QueueName.ANALYTICS, async () => {}),
     createWorker(QueueName.CLEANUP, async () => {}),
-        // Phase 3 knowledge pipeline workers
+    // Phase 3 knowledge pipeline workers
     createKnowledgeIngestionWorker(),
     createDocumentProcessingWorker(),
     createEmbeddingGenerationWorker(),
@@ -53,6 +58,8 @@ export async function startWorkers(): Promise<void> {
     createMemoryExtractionWorker(),
     createMemoryEmbeddingWorker(),
     createConversationSummaryWorker(),
+    // Phase 6 agent workers
+    createAgentWorker(),
   ];
 
   logger.info({ count: workers.length }, 'Workers started');

@@ -19,9 +19,7 @@ const CODE_FENCE_RE = /^```/;
 
 /** Sentence boundary heuristic — keeps abbreviations ("Dr.", "U.S.") intact. */
 export function splitIntoSentences(text: string): string[] {
-  const parts = text
-    .replace(/\s+/g, ' ')
-    .split(/(?<=[.!?])\s+(?=[A-Z0-9"'(])/);
+  const parts = text.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+(?=[A-Z0-9"'(])/);
   return parts.filter((p) => p.trim().length > 0);
 }
 

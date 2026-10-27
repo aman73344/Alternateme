@@ -30,6 +30,8 @@ export function createKnowledgeCleanupWorker(): Worker {
     { connection, concurrency: config.queue.concurrency },
   );
   worker.on('completed', (job) => logger.info({ jobId: job.id }, 'Knowledge cleanup completed'));
-  worker.on('failed', (job, err) => logger.error({ jobId: job?.id, err: err?.message }, 'Knowledge cleanup failed'));
+  worker.on('failed', (job, err) =>
+    logger.error({ jobId: job?.id, err: err?.message }, 'Knowledge cleanup failed'),
+  );
   return worker;
 }

@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
-  BaseError, ValidationError, AuthenticationError,
-  AuthorizationError, NotFoundError,
+  BaseError,
+  ValidationError,
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
 } from '@/utils/errors';
 
 describe('BaseError', () => {

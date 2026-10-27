@@ -15,10 +15,7 @@ export class OtherExtractor implements DocumentExtractor {
   }
 
   async extract(source: ExtractSource): Promise<ExtractionResult> {
-    const content =
-      source.buffer?.toString('utf8') ||
-      (source.metadata?.content as string) ||
-      '';
+    const content = source.buffer?.toString('utf8') || (source.metadata?.content as string) || '';
 
     if (!content || content.trim().length === 0) {
       throw new KnowledgeError('EMPTY_DOCUMENT', undefined, 'No content provided for this source');

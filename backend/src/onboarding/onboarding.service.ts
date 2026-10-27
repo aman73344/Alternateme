@@ -3,7 +3,12 @@ import { createAuditLog } from '@/auth/repositories/audit.repository';
 import { NotFoundError, ConflictError, BusinessError } from '@/utils/errors';
 import { encryption } from '@/utils/helpers';
 import { logger } from '@/utils/logger';
-import { RESERVED_USERNAMES, ONBOARDING_STEP_ORDER, REQUIRED_STEPS_FOR_PUBLISH, OnboardingStep } from './onboarding.constants';
+import {
+  RESERVED_USERNAMES,
+  ONBOARDING_STEP_ORDER,
+  REQUIRED_STEPS_FOR_PUBLISH,
+  OnboardingStep,
+} from './onboarding.constants';
 
 type AlternateVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 
@@ -33,7 +38,17 @@ function assertUsernameAllowed(username: string): void {
 }
 
 export const onboardingService = {
-  async startOnboarding(userId: string, data: { username: string; displayName: string; title?: string; bio?: string; avatarUrl?: string; visibility?: string }): Promise<{ alternateId: string; onboardingId: string }> {
+  async startOnboarding(
+    userId: string,
+    data: {
+      username: string;
+      displayName: string;
+      title?: string;
+      bio?: string;
+      avatarUrl?: string;
+      visibility?: string;
+    },
+  ): Promise<{ alternateId: string; onboardingId: string }> {
     const normalizedUsername = data.username.toLowerCase().trim();
 
     assertUsernameAllowed(normalizedUsername);
@@ -79,7 +94,10 @@ export const onboardingService = {
       newValue: { alternateId: alternate.id, username: alternate.username },
     });
 
-    logger.info({ userId, alternateId: alternate.id, onboardingId: onboarding.id }, 'Onboarding started');
+    logger.info(
+      { userId, alternateId: alternate.id, onboardingId: onboarding.id },
+      'Onboarding started',
+    );
 
     return { alternateId: alternate.id, onboardingId: onboarding.id };
   },
@@ -105,7 +123,16 @@ export const onboardingService = {
     };
   },
 
-  async savePersonalInfo(userId: string, data: { alternateId: string; displayName: string; title?: string; bio?: string; username: string }): Promise<void> {
+  async savePersonalInfo(
+    userId: string,
+    data: {
+      alternateId: string;
+      displayName: string;
+      title?: string;
+      bio?: string;
+      username: string;
+    },
+  ): Promise<void> {
     // Verify ownership
     const alternate = await prisma.alternate.findFirst({
       where: { id: data.alternateId, userId, deletedAt: null },
@@ -150,7 +177,10 @@ export const onboardingService = {
         where: { id: onboarding.id },
         data: {
           currentStep: OnboardingStep.SOURCES,
-          completedSteps: pushStep(onboarding.completedSteps as OnboardingStep[], OnboardingStep.PERSONAL),
+          completedSteps: pushStep(
+            onboarding.completedSteps as OnboardingStep[],
+            OnboardingStep.PERSONAL,
+          ),
           status: 'IN_PROGRESS',
         },
       });
@@ -165,7 +195,18 @@ export const onboardingService = {
     });
   },
 
-  async savePersona(userId: string, data: { alternateId: string; tone?: string; writingStyle?: string; personality?: string; instructions?: string; boundaries?: string; refusalBehavior?: string }): Promise<void> {
+  async savePersona(
+    userId: string,
+    data: {
+      alternateId: string;
+      tone?: string;
+      writingStyle?: string;
+      personality?: string;
+      instructions?: string;
+      boundaries?: string;
+      refusalBehavior?: string;
+    },
+  ): Promise<void> {
     const alternate = await prisma.alternate.findFirst({
       where: { id: data.alternateId, userId, deletedAt: null },
     });
@@ -205,7 +246,10 @@ export const onboardingService = {
         where: { id: onboarding.id },
         data: {
           currentStep: OnboardingStep.VOICE,
-          completedSteps: pushStep(onboarding.completedSteps as OnboardingStep[], OnboardingStep.PERSONA),
+          completedSteps: pushStep(
+            onboarding.completedSteps as OnboardingStep[],
+            OnboardingStep.PERSONA,
+          ),
         },
       });
     }
@@ -218,7 +262,17 @@ export const onboardingService = {
     });
   },
 
-  async saveVoice(userId: string, data: { alternateId: string; provider: string; voiceId: string; name: string; type: string; consent?: boolean }): Promise<void> {
+  async saveVoice(
+    userId: string,
+    data: {
+      alternateId: string;
+      provider: string;
+      voiceId: string;
+      name: string;
+      type: string;
+      consent?: boolean;
+    },
+  ): Promise<void> {
     const alternate = await prisma.alternate.findFirst({
       where: { id: data.alternateId, userId, deletedAt: null },
     });
@@ -273,7 +327,10 @@ export const onboardingService = {
         where: { id: onboarding.id },
         data: {
           currentStep: OnboardingStep.AI_PROVIDER,
-          completedSteps: pushStep(onboarding.completedSteps as OnboardingStep[], OnboardingStep.VOICE),
+          completedSteps: pushStep(
+            onboarding.completedSteps as OnboardingStep[],
+            OnboardingStep.VOICE,
+          ),
         },
       });
     }
@@ -287,7 +344,16 @@ export const onboardingService = {
     });
   },
 
-  async saveAIProvider(userId: string, data: { alternateId: string; provider: string; apiKey: string; keyLabel?: string; defaultModel?: string }): Promise<{ provider: string; status: string }> {
+  async saveAIProvider(
+    userId: string,
+    data: {
+      alternateId: string;
+      provider: string;
+      apiKey: string;
+      keyLabel?: string;
+      defaultModel?: string;
+    },
+  ): Promise<{ provider: string; status: string }> {
     const alternate = await prisma.alternate.findFirst({
       where: { id: data.alternateId, userId, deletedAt: null },
     });
@@ -335,7 +401,10 @@ export const onboardingService = {
         where: { id: onboarding.id },
         data: {
           currentStep: OnboardingStep.PUBLISH,
-          completedSteps: pushStep(onboarding.completedSteps as OnboardingStep[], OnboardingStep.AI_PROVIDER),
+          completedSteps: pushStep(
+            onboarding.completedSteps as OnboardingStep[],
+            OnboardingStep.AI_PROVIDER,
+          ),
         },
       });
     }
@@ -352,7 +421,11 @@ export const onboardingService = {
     return { provider: data.provider, status: 'PENDING' };
   },
 
-  async completeStep(userId: string, alternateId: string, step: string): Promise<{ currentStep: string; completedSteps: string[] }> {
+  async completeStep(
+    userId: string,
+    alternateId: string,
+    step: string,
+  ): Promise<{ currentStep: string; completedSteps: string[] }> {
     const alternate = await prisma.alternate.findFirst({
       where: { id: alternateId, userId, deletedAt: null },
     });
@@ -398,7 +471,9 @@ export const onboardingService = {
       case 'AI_PROVIDER': {
         const providerConfig = await prisma.aIProviderConfig.findUnique({ where: { alternateId } });
         if (!providerConfig || providerConfig.status === 'INVALID') {
-          throw new BusinessError('A valid AI provider configuration is required before completing this step');
+          throw new BusinessError(
+            'A valid AI provider configuration is required before completing this step',
+          );
         }
         break;
       }
@@ -409,14 +484,17 @@ export const onboardingService = {
         throw new BusinessError(`Unknown step: ${step}`);
     }
 
-    const updatedCompletedSteps = pushStep(onboarding.completedSteps as OnboardingStep[], step as OnboardingStep);
+    const updatedCompletedSteps = pushStep(
+      onboarding.completedSteps as OnboardingStep[],
+      step as OnboardingStep,
+    );
     const nextStep = getNextStep(step as OnboardingStep);
 
     await prisma.onboarding.update({
       where: { id: onboarding.id },
       data: {
         completedSteps: updatedCompletedSteps,
-        currentStep: (step === 'PUBLISH' ? OnboardingStep.PUBLISH : nextStep),
+        currentStep: step === 'PUBLISH' ? OnboardingStep.PUBLISH : nextStep,
         status: 'IN_PROGRESS',
       },
     });
@@ -455,7 +533,9 @@ export const onboardingService = {
       const completedSet = new Set((alternate.onboarding.completedSteps as any) || []);
       const missingRequired = REQUIRED_STEPS_FOR_PUBLISH.filter((step) => !completedSet.has(step));
       if (missingRequired.length > 0) {
-        throw new BusinessError(`Required onboarding steps not completed: ${missingRequired.join(', ')}`);
+        throw new BusinessError(
+          `Required onboarding steps not completed: ${missingRequired.join(', ')}`,
+        );
       }
     }
 
@@ -463,33 +543,40 @@ export const onboardingService = {
 
     // Transactional publish — update Alternate and Onboarding atomically
     // Derive transaction client type from prisma's $transaction signature
-    await prisma.$transaction(async (tx: Parameters<typeof prisma.$transaction>[0] extends (tx: infer T) => unknown ? T : never) => {
-      await tx.alternate.update({
-        where: { id: alternateId },
-        data: {
-          status: 'PUBLISHED',
-          publishedAt: new Date(),
-        },
-      });
+    await prisma.$transaction(
+      async (
+        tx: Parameters<typeof prisma.$transaction>[0] extends (tx: infer T) => unknown ? T : never,
+      ) => {
+        await tx.alternate.update({
+          where: { id: alternateId },
+          data: {
+            status: 'PUBLISHED',
+            publishedAt: new Date(),
+          },
+        });
 
-      // Also ensure visibility is PUBLIC for public URL access
-      await tx.alternate.update({
-        where: { id: alternateId },
-        data: {
-          visibility: 'PUBLIC',
-        },
-      });
+        // Also ensure visibility is PUBLIC for public URL access
+        await tx.alternate.update({
+          where: { id: alternateId },
+          data: {
+            visibility: 'PUBLIC',
+          },
+        });
 
-      await tx.onboarding.updateMany({
-        where: { alternateId, userId },
-        data: {
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          currentStep: OnboardingStep.PUBLISH,
-          completedSteps: pushStep((alternate.onboarding?.completedSteps as OnboardingStep[]) || [], OnboardingStep.PUBLISH),
-        },
-      });
-    });
+        await tx.onboarding.updateMany({
+          where: { alternateId, userId },
+          data: {
+            status: 'COMPLETED',
+            completedAt: new Date(),
+            currentStep: OnboardingStep.PUBLISH,
+            completedSteps: pushStep(
+              (alternate.onboarding?.completedSteps as OnboardingStep[]) || [],
+              OnboardingStep.PUBLISH,
+            ),
+          },
+        });
+      },
+    );
 
     await createAuditLog({
       userId,
@@ -506,7 +593,10 @@ export const onboardingService = {
       newValue: { username: alternate.username, publicUrl },
     });
 
-    logger.info({ userId, alternateId, username: alternate.username, publicUrl }, 'Alternate published');
+    logger.info(
+      { userId, alternateId, username: alternate.username, publicUrl },
+      'Alternate published',
+    );
 
     return { publicUrl };
   },
@@ -529,7 +619,9 @@ export const onboardingService = {
 
     const sources = alternate.sources || [];
     const readyCount = sources.filter((s: any) => s.status === 'READY').length;
-    const pendingCount = sources.filter((s: any) => s.status === 'PENDING' || s.status === 'PROCESSING').length;
+    const pendingCount = sources.filter(
+      (s: any) => s.status === 'PENDING' || s.status === 'PROCESSING',
+    ).length;
 
     return {
       alternate: {
@@ -539,11 +631,13 @@ export const onboardingService = {
         avatarUrl: alternate.avatarUrl,
         username: alternate.username,
       },
-      persona: alternate.persona ? {
-        tone: alternate.persona.tone,
-        writingStyle: alternate.persona.writingStyle,
-        personality: alternate.persona.personality,
-      } : null,
+      persona: alternate.persona
+        ? {
+            tone: alternate.persona.tone,
+            writingStyle: alternate.persona.writingStyle,
+            personality: alternate.persona.personality,
+          }
+        : null,
       sources: {
         count: sources.length,
         ready: readyCount,
@@ -552,12 +646,14 @@ export const onboardingService = {
       voice: {
         configured: !!alternate.voiceProfile,
       },
-      aiProvider: alternate.aiProvider ? {
-        provider: alternate.aiProvider.provider,
-        configured: true,
-      } : {
-        configured: false,
-      },
+      aiProvider: alternate.aiProvider
+        ? {
+            provider: alternate.aiProvider.provider,
+            configured: true,
+          }
+        : {
+            configured: false,
+          },
     };
   },
 };

@@ -7,10 +7,7 @@
 
 import { prisma } from '@/database';
 import { logger } from '@/utils/logger';
-import {
-  MemoryType,
-  Memory,
-} from './memory.types';
+import { MemoryType, Memory } from './memory.types';
 import { toMemory } from './memory.repository';
 import { MEMORY_DEFAULTS } from './memory.constants';
 
@@ -31,14 +28,12 @@ export async function retrieveByVector(
   const limit = params.limit ?? MEMORY_DEFAULTS.TOP_K;
   const minScore = params.minScore ?? MEMORY_DEFAULTS.MIN_SCORE;
 
-    const vectorStr = `[${queryEmbedding.map((v) => Number(v)).join(',')}]`;
+  const vectorStr = `[${queryEmbedding.map((v) => Number(v)).join(',')}]`;
 
   const queryParams: unknown[] = [vectorStr, alternateId, userId, minScore];
   let paramIndex = 5;
 
-  const visibilityClause = params.includePrivate
-    ? ''
-    : `AND m.visibility = 'ALTERNATE'`;
+  const visibilityClause = params.includePrivate ? '' : `AND m.visibility = 'ALTERNATE'`;
 
   let typesClause = '';
   if (params.types && params.types.length > 0) {
@@ -71,30 +66,32 @@ export async function retrieveByVector(
   `;
 
   try {
-    const results = await prisma.$queryRawUnsafe<Array<{
-      id: string;
-      alternateId: string;
-      userId: string;
-      type: string;
-      content: string;
-      normalizedContent: string;
-      importance: number;
-      confidence: number;
-      sourceType: string;
-      sourceConversationId: string | null;
-      sourceMessageId: string | null;
-      status: string;
-      visibility: string;
-      isExtracted: boolean;
-      expiresAt: Date | null;
-      lastAccessedAt: Date;
-      lastReinforcedAt: Date;
-      reinforcementCount: number;
-      supersededById: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      similarity: number;
-    }>>(query, ...queryParams);
+    const results = await prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        alternateId: string;
+        userId: string;
+        type: string;
+        content: string;
+        normalizedContent: string;
+        importance: number;
+        confidence: number;
+        sourceType: string;
+        sourceConversationId: string | null;
+        sourceMessageId: string | null;
+        status: string;
+        visibility: string;
+        isExtracted: boolean;
+        expiresAt: Date | null;
+        lastAccessedAt: Date;
+        lastReinforcedAt: Date;
+        reinforcementCount: number;
+        supersededById: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        similarity: number;
+      }>
+    >(query, ...queryParams);
 
     return results.map((r) => ({ ...toMemory(r as any), similarity: Number(r.similarity) }));
   } catch (error) {
@@ -113,7 +110,7 @@ export async function findSemanticDuplicates(
   threshold: number = MEMORY_DEFAULTS.MAX_SIMILARITY_THRESHOLD,
   limit: number = 20,
 ): Promise<Memory[]> {
-    const vectorStr = `[${embedding.map((v) => Number(v)).join(',')}]`;
+  const vectorStr = `[${embedding.map((v) => Number(v)).join(',')}]`;
 
   const query = `
     SELECT
@@ -134,34 +131,34 @@ export async function findSemanticDuplicates(
   `;
 
   try {
-    const results = await prisma.$queryRawUnsafe<Array<{
-      id: string;
-      alternateId: string;
-      userId: string;
-      type: string;
-      content: string;
-      normalizedContent: string;
-      importance: number;
-      confidence: number;
-      sourceType: string;
-      sourceConversationId: string | null;
-      sourceMessageId: string | null;
-      status: string;
-      visibility: string;
-      isExtracted: boolean;
-      expiresAt: Date | null;
-      lastAccessedAt: Date;
-      lastReinforcedAt: Date;
-      reinforcementCount: number;
-      supersededById: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      similarity: number;
-    }>>(query, vectorStr, alternateId, userId, limit);
+    const results = await prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        alternateId: string;
+        userId: string;
+        type: string;
+        content: string;
+        normalizedContent: string;
+        importance: number;
+        confidence: number;
+        sourceType: string;
+        sourceConversationId: string | null;
+        sourceMessageId: string | null;
+        status: string;
+        visibility: string;
+        isExtracted: boolean;
+        expiresAt: Date | null;
+        lastAccessedAt: Date;
+        lastReinforcedAt: Date;
+        reinforcementCount: number;
+        supersededById: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        similarity: number;
+      }>
+    >(query, vectorStr, alternateId, userId, limit);
 
-    return results
-      .filter((r) => Number(r.similarity) > threshold)
-      .map((m) => toMemory(m as any));
+    return results.filter((r) => Number(r.similarity) > threshold).map((m) => toMemory(m as any));
   } catch (error) {
     logger.error({ error, alternateId, userId }, 'Memory semantic duplicate search failed');
     return [];

@@ -39,7 +39,12 @@ interface Config {
     gemini: { apiKey: string; model: string };
   };
   oauth: {
-    google: { clientId: string; clientSecret: string; redirectUri: string };
+    google: {
+      clientId: string;
+      clientSecret: string;
+      redirectUri: string;
+      integrationsRedirectUri: string;
+    };
     github: { clientId: string; clientSecret: string; redirectUri: string };
   };
   voice: {
@@ -115,7 +120,7 @@ interface Config {
       maxDocumentSize: number;
       allowedMimeTypes: string[];
     };
-        retry: {
+    retry: {
       maxAttempts: number;
     };
   };
@@ -136,6 +141,27 @@ interface Config {
       triggerTokens: number;
       summaryModel: string;
     };
+  };
+  agent: {
+    enabled: boolean;
+    /** Run the loop through BullMQ instead of inline (long/approval flows). */
+    asyncEnabled: boolean;
+    limits: {
+      maxSteps: number;
+      maxToolCalls: number;
+      maxRuntimeMs: number;
+      maxToolRuntimeMs: number;
+      maxContextTokens: number;
+      maxToolResultChars: number;
+      maxLlmCalls: number;
+      maxToolCallsPerTool: number;
+    };
+    approval: {
+      ttlMs: number;
+      /** Central risk → approval policy. Tools never hardcode this. */
+      requireByRiskLevel: Record<string, boolean>;
+    };
+    sampleActionToolEnabled: boolean;
   };
 }
 
@@ -233,12 +259,19 @@ const config: Config = {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      redirectUri: process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/auth/google/callback`,
+      redirectUri:
+        process.env.GOOGLE_REDIRECT_URI ||
+        `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/auth/google/callback`,
+      integrationsRedirectUri:
+        process.env.GOOGLE_INTEGRATIONS_REDIRECT_URI ||
+        `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/integrations/oauth/google/callback`,
     },
     github: {
       clientId: process.env.GITHUB_CLIENT_ID || '',
       clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-      redirectUri: process.env.GITHUB_REDIRECT_URI || `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/auth/github/callback`,
+      redirectUri:
+        process.env.GITHUB_REDIRECT_URI ||
+        `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/auth/github/callback`,
     },
   },
   logging: {
@@ -286,18 +319,18 @@ const config: Config = {
       userAgent: process.env.INGESTION_USER_AGENT || 'AlternateMeBot/1.0 (+https://alterneme.com)',
     },
     file: {
-      maxFileSize:
-        parseInt(process.env.MAX_FILE_SIZE || String(25 * 1024 * 1024), 10),
-      maxDocumentSize:
-        parseInt(process.env.MAX_DOCUMENT_SIZE || String(15 * 1024 * 1024), 10),
-      allowedMimeTypes: (process.env.ALLOWED_FILE_TYPES || 'application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        .split(','),
+      maxFileSize: parseInt(process.env.MAX_FILE_SIZE || String(25 * 1024 * 1024), 10),
+      maxDocumentSize: parseInt(process.env.MAX_DOCUMENT_SIZE || String(15 * 1024 * 1024), 10),
+      allowedMimeTypes: (
+        process.env.ALLOWED_FILE_TYPES ||
+        'application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ).split(','),
     },
     retry: {
       maxAttempts: parseInt(process.env.INGESTION_MAX_RETRIES || '3', 10),
     },
-    },
-    memory: {
+  },
+  memory: {
     enabled: process.env.MEMORY_ENABLED !== 'false',
     extraction: {
       enabled: process.env.MEMORY_EXTRACTION_ENABLED !== 'false',
@@ -314,6 +347,35 @@ const config: Config = {
       triggerTokens: parseInt(process.env.CONVERSATION_SUMMARY_TRIGGER_TOKENS || '4000', 10),
       summaryModel: process.env.CONVERSATION_SUMMARY_MODEL || 'gpt-4o-mini',
     },
+  },
+  // Phase 6 — agent orchestration. Every hard execution limit lives here so no
+  // limit is duplicated in code paths (see agent.config.ts).
+  agent: {
+    enabled: process.env.AGENT_ENABLED === 'true',
+    asyncEnabled: process.env.AGENT_ASYNC === 'true',
+    limits: {
+      maxSteps: parseInt(process.env.AGENT_MAX_STEPS || '8', 10),
+      maxToolCalls: parseInt(process.env.AGENT_MAX_TOOL_CALLS || '10', 10),
+      maxRuntimeMs: parseInt(process.env.AGENT_MAX_RUNTIME_MS || '60000', 10),
+      maxToolRuntimeMs: parseInt(process.env.AGENT_MAX_TOOL_RUNTIME_MS || '15000', 10),
+      maxContextTokens: parseInt(process.env.AGENT_MAX_CONTEXT_TOKENS || '8000', 10),
+      maxToolResultChars: parseInt(process.env.AGENT_MAX_TOOL_RESULT_CHARS || '4000', 10),
+      maxLlmCalls: parseInt(process.env.AGENT_MAX_LLM_CALLS || '12', 10),
+      maxToolCallsPerTool: parseInt(process.env.AGENT_MAX_TOOL_CALLS_PER_TOOL || '4', 10),
+    },
+    approval: {
+      ttlMs: parseInt(process.env.AGENT_APPROVAL_TTL_MS || '86400000', 10),
+      // Deny-by-default for anything that can change state: READ_ONLY never
+      // needs approval, HIGH/DESTRUCTIVE always do, LOW/MEDIUM are opt-in.
+      requireByRiskLevel: {
+        READ_ONLY: false,
+        LOW: process.env.AGENT_APPROVAL_LOW === 'true',
+        MEDIUM: process.env.AGENT_APPROVAL_MEDIUM === 'true',
+        HIGH: true,
+        DESTRUCTIVE: true,
+      },
+    },
+    sampleActionToolEnabled: process.env.AGENT_SAMPLE_ACTION_TOOL_ENABLED === 'true',
   },
 };
 

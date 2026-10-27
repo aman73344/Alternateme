@@ -42,8 +42,7 @@ export function formatMemories(
     const content = rm.memory.content.trim();
     const typeLabel = formatMemoryType(rm.memory.type);
     const confidenceLabel =
-      rm.memory.confidence >= 0.9 ? 'high' :
-      rm.memory.confidence >= 0.7 ? 'medium' : 'low';
+      rm.memory.confidence >= 0.9 ? 'high' : rm.memory.confidence >= 0.7 ? 'medium' : 'low';
 
     const entry = `${memoryCount + 1}. ${typeLabel} (${confidenceLabel} confidence): ${content}`;
     const entryTokens = estimateTokens(entry);

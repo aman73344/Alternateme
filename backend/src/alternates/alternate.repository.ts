@@ -39,13 +39,19 @@ export async function findAlternateByUsername(username: string): Promise<Alterna
   });
 }
 
-export async function findAlternateByUserIdAndId(userId: string, id: string): Promise<Alternate | null> {
+export async function findAlternateByUserIdAndId(
+  userId: string,
+  id: string,
+): Promise<Alternate | null> {
   return prisma.alternate.findFirst({
     where: { id, userId, deletedAt: null },
   });
 }
 
-export async function findAlternatesByUserId(userId: string, options?: { skip?: number; take?: number }): Promise<Alternate[]> {
+export async function findAlternatesByUserId(
+  userId: string,
+  options?: { skip?: number; take?: number },
+): Promise<Alternate[]> {
   return prisma.alternate.findMany({
     where: { userId, deletedAt: null },
     skip: options?.skip ?? 0,
@@ -54,7 +60,11 @@ export async function findAlternatesByUserId(userId: string, options?: { skip?: 
   });
 }
 
-export async function updateAlternate(id: string, _userId: string, data: Partial<Alternate>): Promise<Alternate> {
+export async function updateAlternate(
+  id: string,
+  _userId: string,
+  data: Partial<Alternate>,
+): Promise<Alternate> {
   return prisma.alternate.update({
     where: { id },
     data: {

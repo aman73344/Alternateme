@@ -65,7 +65,10 @@ export async function processExtractedMemory(
 
   // 2. Idempotency — check existing by source message + type
   const existingBySource = await findExistingBySourceMessage(
-    alternateId, userId, messageId, extracted.type,
+    alternateId,
+    userId,
+    messageId,
+    extracted.type,
   );
   if (existingBySource) {
     await reinforceMemory(existingBySource.id, alternateId, userId);
@@ -75,7 +78,10 @@ export async function processExtractedMemory(
   // 3. Exact dedup — normalized content match (cheap, deterministic first)
   const normalized = normalizeContent(extracted.content);
   const existingByContent = await findExistingByNormalizedContent(
-    alternateId, userId, normalized, extracted.type,
+    alternateId,
+    userId,
+    normalized,
+    extracted.type,
   );
   if (existingByContent) {
     await reinforceMemory(existingByContent.id, alternateId, userId);
@@ -86,8 +92,11 @@ export async function processExtractedMemory(
   const embedding = await embedText(extracted.content);
   if (embedding) {
     const duplicates = await findSemanticDuplicates(
-      alternateId, userId, embedding,
-      MEMORY_DEFAULTS.MAX_SIMILARITY_THRESHOLD, 5,
+      alternateId,
+      userId,
+      embedding,
+      MEMORY_DEFAULTS.MAX_SIMILARITY_THRESHOLD,
+      5,
     );
 
     for (const dup of duplicates) {
@@ -95,10 +104,7 @@ export async function processExtractedMemory(
       if (dupNormalized !== normalized && dup.type === extracted.type) {
         // Contradictory — supersede old memory
         await supersedeMemory(dup.id, alternateId, userId);
-        logger.info(
-          { oldMemoryId: dup.id, newContent: extracted.content },
-          'memory.superseded',
-        );
+        logger.info({ oldMemoryId: dup.id, newContent: extracted.content }, 'memory.superseded');
       }
     }
   }

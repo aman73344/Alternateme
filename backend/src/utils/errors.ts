@@ -66,7 +66,7 @@ export class DatabaseError extends BaseError {
 }
 
 export class ProviderError extends BaseError {
-  constructor(message: string, provider: string, statusCode = httpStatus.BAD_GATEWAY) {
+  constructor(message: string, provider: string, statusCode: number = httpStatus.BAD_GATEWAY) {
     super(message, statusCode, `${provider.toUpperCase()}_ERROR`, false);
   }
 }

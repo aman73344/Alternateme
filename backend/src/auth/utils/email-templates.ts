@@ -11,7 +11,11 @@ export function buildWelcomeEmail(name: string, email: string): { subject: strin
   };
 }
 
-export function buildVerificationEmail(name: string, email: string, token: string): { subject: string; html: string } {
+export function buildVerificationEmail(
+  name: string,
+  email: string,
+  token: string,
+): { subject: string; html: string } {
   const verifyUrl = `${config.app.clientUrl}/verify-email?token=${encodeURIComponent(token)}`;
   return {
     subject: 'Verify your Alternate Me email',
@@ -26,7 +30,11 @@ export function buildVerificationEmail(name: string, email: string, token: strin
   };
 }
 
-export function buildPasswordResetEmail(name: string, email: string, token: string): { subject: string; html: string } {
+export function buildPasswordResetEmail(
+  name: string,
+  email: string,
+  token: string,
+): { subject: string; html: string } {
   const resetUrl = `${config.app.clientUrl}/reset-password?token=${encodeURIComponent(token)}`;
   return {
     subject: 'Reset your Alternate Me password',
@@ -39,7 +47,10 @@ export function buildPasswordResetEmail(name: string, email: string, token: stri
   };
 }
 
-export function buildEmailChangedNotification(name: string, email: string): { subject: string; html: string } {
+export function buildEmailChangedNotification(
+  name: string,
+  email: string,
+): { subject: string; html: string } {
   return {
     subject: 'Your Alternate Me email address was changed',
     html: `
@@ -50,7 +61,11 @@ export function buildEmailChangedNotification(name: string, email: string): { su
   };
 }
 
-export function buildSecurityAlertEmail(name: string, email: string, details: string): { subject: string; html: string } {
+export function buildSecurityAlertEmail(
+  name: string,
+  email: string,
+  details: string,
+): { subject: string; html: string } {
   return {
     subject: 'Security alert for your Alternate Me account',
     html: `

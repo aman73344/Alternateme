@@ -28,9 +28,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     success: false,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: config.app.nodeEnv === 'production'
-        ? 'An unexpected error occurred'
-        : err.message,
+      message: config.app.nodeEnv === 'production' ? 'An unexpected error occurred' : err.message,
     },
   };
 

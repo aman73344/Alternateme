@@ -62,7 +62,10 @@ export class KnowledgeChunkRepository {
     return prisma.documentChunk.count({ where: where as Prisma.DocumentChunkWhereInput });
   }
 
-  async getChunkIdsForDocument(documentId: string, version: number): Promise<Array<{ id: string; chunkIndex: number }>> {
+  async getChunkIdsForDocument(
+    documentId: string,
+    version: number,
+  ): Promise<Array<{ id: string; chunkIndex: number }>> {
     return prisma.documentChunk.findMany({
       where: { documentId, version },
       select: { id: true, chunkIndex: true },
@@ -70,7 +73,10 @@ export class KnowledgeChunkRepository {
     });
   }
 
-  async getChunksForDocument(documentId: string, version: number): Promise<Array<{ id: string; content: string; chunkIndex: number }>> {
+  async getChunksForDocument(
+    documentId: string,
+    version: number,
+  ): Promise<Array<{ id: string; content: string; chunkIndex: number }>> {
     return prisma.documentChunk.findMany({
       where: { documentId, version },
       select: { id: true, content: true, chunkIndex: true },
@@ -117,7 +123,7 @@ export class KnowledgeChunkRepository {
   /** Whether the pgvector extension + embeddings table are usable. */
   async isPgvectorReady(): Promise<boolean> {
     try {
-      await prisma.$executeRawUnsafe('SELECT 1 FROM pg_extension WHERE extname = \'vector\'');
+      await prisma.$executeRawUnsafe("SELECT 1 FROM pg_extension WHERE extname = 'vector'");
       return true;
     } catch {
       return false;

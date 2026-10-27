@@ -17,7 +17,11 @@ export class MarkdownExtractor implements DocumentExtractor {
 
   async extract(source: ExtractSource): Promise<ExtractionResult> {
     if (!source.buffer) {
-      throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', undefined, 'Markdown source is missing its file content');
+      throw new KnowledgeError(
+        'UNSUPPORTED_FILE_TYPE',
+        undefined,
+        'Markdown source is missing its file content',
+      );
     }
     const content = source.buffer.toString('utf8');
     if (!content || content.trim().length === 0) {

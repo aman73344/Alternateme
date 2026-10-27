@@ -35,10 +35,7 @@ export function createMemoryEmbeddingWorker(): Worker {
       const data = job.data as MemoryEmbeddingJobData;
       const started = Date.now();
 
-      logger.info(
-        { jobId: job.id, memoryId: data.memoryId },
-        'Memory embedding job started',
-      );
+      logger.info({ jobId: job.id, memoryId: data.memoryId }, 'Memory embedding job started');
 
       try {
         const result = await embeddingService.embed([data.content]);

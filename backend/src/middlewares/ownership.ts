@@ -2,7 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '@/database';
 import { NotFoundError, AuthorizationError } from '@/utils/errors';
 
-export async function requireAlternateOwnership(req: Request, _res: Response, next: NextFunction): Promise<void> {
+export async function requireAlternateOwnership(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
   const alternateId = req.params.id || req.params.alternateId;
   const userId = req.authUser?.id;
 
@@ -28,7 +32,11 @@ export async function requireAlternateOwnership(req: Request, _res: Response, ne
   next();
 }
 
-export async function requireSourceOwnership(req: Request, _res: Response, next: NextFunction): Promise<void> {
+export async function requireSourceOwnership(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
   const sourceId = req.params.sourceId;
   const userId = req.authUser?.id;
 
@@ -53,7 +61,11 @@ export async function requireSourceOwnership(req: Request, _res: Response, next:
   next();
 }
 
-export async function requireOnboardingOwnership(req: Request, _res: Response, next: NextFunction): Promise<void> {
+export async function requireOnboardingOwnership(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
   const alternateId = req.params.alternateId || req.body.alternateId;
   const userId = req.authUser?.id;
 

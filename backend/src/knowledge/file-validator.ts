@@ -13,7 +13,11 @@ export interface FileValidationResult {
 
 const DANGEROUS_MAGIC = [
   { label: 'PE/Executable', fn: (b: Uint8Array) => b.length > 1 && b[0] === 0x4d && b[1] === 0x5a }, // MZ
-  { label: 'ELF', fn: (b: Uint8Array) => b.length > 3 && b[0] === 0x7f && b[1] === 0x45 && b[2] === 0x4c && b[3] === 0x46 },
+  {
+    label: 'ELF',
+    fn: (b: Uint8Array) =>
+      b.length > 3 && b[0] === 0x7f && b[1] === 0x45 && b[2] === 0x4c && b[3] === 0x46,
+  },
   { label: 'Shell script', fn: (b: Uint8Array) => b.length > 2 && b[0] === 0x23 && b[1] === 0x21 }, // #!
 ];
 
@@ -29,7 +33,11 @@ function looksDangerous(buffer: Uint8Array): string | null {
  * and path-traversal-safe names. Never trusts the filename alone. Prevents
  * zip-bombs/executables/malformed uploads from entering the pipeline.
  */
-export function validateUploadedFile(buffer: Buffer, fileName?: string, claimedMime?: string): FileValidationResult {
+export function validateUploadedFile(
+  buffer: Buffer,
+  fileName?: string,
+  claimedMime?: string,
+): FileValidationResult {
   const maxSize = config.knowledge.file.maxFileSize;
   if (buffer.length === 0) {
     throw new KnowledgeError('EMPTY_DOCUMENT', { fileName });
@@ -51,7 +59,9 @@ export function validateUploadedFile(buffer: Buffer, fileName?: string, claimedM
   }
 
   const magicMime = detectMagicMime(new Uint8Array(buffer.subarray(0, 64)));
-  const effectiveMime = magicMime || (claimedMime && !claimedMime.startsWith('application/octet-stream') ? claimedMime : undefined);
+  const effectiveMime =
+    magicMime ||
+    (claimedMime && !claimedMime.startsWith('application/octet-stream') ? claimedMime : undefined);
   const profile = getFileProfile(effectiveMime, fileName);
 
   if (!profile) {
@@ -60,7 +70,11 @@ export function validateUploadedFile(buffer: Buffer, fileName?: string, claimedM
 
   // Claimed MIME must not contradict magic bytes for container formats.
   if (magicMime && profile.mimeType !== magicMime) {
-    throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', { fileName, magicMime, profileMime: profile.mimeType });
+    throw new KnowledgeError('UNSUPPORTED_FILE_TYPE', {
+      fileName,
+      magicMime,
+      profileMime: profile.mimeType,
+    });
   }
 
   return {

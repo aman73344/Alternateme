@@ -5,10 +5,7 @@ import { voiceController } from '@/voice/voice.controller';
 import { validate } from '@/middlewares/validate';
 import { authenticate } from '@/auth/middlewares/auth.middleware';
 import { requireAlternateOwnership } from '@/middlewares/ownership';
-import {
-  createAlternateSchema,
-  updateAlternateSchema,
-} from './alternate.schema';
+import { createAlternateSchema, updateAlternateSchema } from './alternate.schema';
 import { voiceSchema } from '@/onboarding/onboarding.schema';
 import { reprocessSourceSchema } from '@/sources/source.schema';
 import { asyncHandler } from '@/utils/asyncHandler';
@@ -17,12 +14,22 @@ const router: import('express').Router = Router();
 
 router.use(authenticate);
 
-router.post('/', validate(createAlternateSchema), asyncHandler((req, res) => alternateController.createAlternate(req, res)));
+router.post(
+  '/',
+  validate(createAlternateSchema),
+  asyncHandler((req, res) => alternateController.createAlternate(req, res)),
+);
 
 // Availability check must be before /:id routes
-router.get('/username/:username/availability', asyncHandler((req, res) => alternateController.checkUsernameAvailability(req, res)));
+router.get(
+  '/username/:username/availability',
+  asyncHandler((req, res) => alternateController.checkUsernameAvailability(req, res)),
+);
 
-router.get('/', asyncHandler((req, res) => alternateController.getUserAlternates(req, res)));
+router.get(
+  '/',
+  asyncHandler((req, res) => alternateController.getUserAlternates(req, res)),
+);
 
 // Sub-resources must be declared before /:id to avoid route shadowing
 // Knowledge source sub-resources (spec: /alternates/:alternateId/sources)
@@ -39,7 +46,11 @@ router.get('/', asyncHandler((req, res) => alternateController.getUserAlternates
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       403: { description: Not the alternate owner }
  */
-router.get('/:alternateId/sources', requireAlternateOwnership, asyncHandler((req, res) => sourceController.getSources(req, res)));
+router.get(
+  '/:alternateId/sources',
+  requireAlternateOwnership,
+  asyncHandler((req, res) => sourceController.getSources(req, res)),
+);
 
 /**
  * @openapi
@@ -57,7 +68,11 @@ router.get('/:alternateId/sources', requireAlternateOwnership, asyncHandler((req
  *       403: { description: Not the alternate owner }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get('/:alternateId/sources/:sourceId', requireAlternateOwnership, asyncHandler((req, res) => sourceController.getSourceStatus(req, res)));
+router.get(
+  '/:alternateId/sources/:sourceId',
+  requireAlternateOwnership,
+  asyncHandler((req, res) => sourceController.getSourceStatus(req, res)),
+);
 
 /**
  * @openapi
@@ -82,7 +97,12 @@ router.get('/:alternateId/sources/:sourceId', requireAlternateOwnership, asyncHa
  *       403: { description: Not the alternate owner }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.post('/:alternateId/sources/:sourceId/reprocess', requireAlternateOwnership, validate(reprocessSourceSchema), asyncHandler((req, res) => sourceController.reprocessSource(req, res)));
+router.post(
+  '/:alternateId/sources/:sourceId/reprocess',
+  requireAlternateOwnership,
+  validate(reprocessSourceSchema),
+  asyncHandler((req, res) => sourceController.reprocessSource(req, res)),
+);
 
 /**
  * @openapi
@@ -100,7 +120,11 @@ router.post('/:alternateId/sources/:sourceId/reprocess', requireAlternateOwnersh
  *       403: { description: Not the alternate owner }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.delete('/:alternateId/sources/:sourceId', requireAlternateOwnership, asyncHandler((req, res) => sourceController.deleteSource(req, res)));
+router.delete(
+  '/:alternateId/sources/:sourceId',
+  requireAlternateOwnership,
+  asyncHandler((req, res) => sourceController.deleteSource(req, res)),
+);
 
 /**
  * @openapi
@@ -117,15 +141,37 @@ router.delete('/:alternateId/sources/:sourceId', requireAlternateOwnership, asyn
  *       403: { description: Not the alternate owner }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get('/:alternateId/knowledge/status', requireAlternateOwnership, asyncHandler((req, res) => sourceController.getKnowledgeStatus(req, res)));
+router.get(
+  '/:alternateId/knowledge/status',
+  requireAlternateOwnership,
+  asyncHandler((req, res) => sourceController.getKnowledgeStatus(req, res)),
+);
 
 // Voice sub-resource (spec: /alternates/:alternateId/voice)
-router.put('/:alternateId/voice', requireAlternateOwnership, validate(voiceSchema), asyncHandler((req, res) => voiceController.saveVoice(req, res)));
+router.put(
+  '/:alternateId/voice',
+  requireAlternateOwnership,
+  validate(voiceSchema),
+  asyncHandler((req, res) => voiceController.saveVoice(req, res)),
+);
 
-router.get('/:id', requireAlternateOwnership, asyncHandler((req, res) => alternateController.getAlternate(req, res)));
+router.get(
+  '/:id',
+  requireAlternateOwnership,
+  asyncHandler((req, res) => alternateController.getAlternate(req, res)),
+);
 
-router.put('/:id', requireAlternateOwnership, validate(updateAlternateSchema), asyncHandler((req, res) => alternateController.updateAlternate(req, res)));
+router.put(
+  '/:id',
+  requireAlternateOwnership,
+  validate(updateAlternateSchema),
+  asyncHandler((req, res) => alternateController.updateAlternate(req, res)),
+);
 
-router.delete('/:id', requireAlternateOwnership, asyncHandler((req, res) => alternateController.deleteAlternate(req, res)));
+router.delete(
+  '/:id',
+  requireAlternateOwnership,
+  asyncHandler((req, res) => alternateController.deleteAlternate(req, res)),
+);
 
 export { router as alternateRouter };

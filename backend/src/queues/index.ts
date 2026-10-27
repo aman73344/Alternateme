@@ -19,6 +19,8 @@ export enum QueueName {
   MEMORY_EXTRACTION = 'memory-extraction',
   MEMORY_EMBEDDING = 'memory-embedding',
   MEMORY_CONVERSATION_SUMMARY = 'memory-conversation-summary',
+  // Phase 6
+  AGENT = 'agent',
 }
 
 // Completely lazy - no connection setup at module load time
@@ -48,13 +50,13 @@ function getQueue(name: QueueName): Queue | null {
   if (queues.has(name)) {
     return queues.get(name) || null;
   }
-  
+
   const connection = getConnection();
   if (!connection) {
     queues.set(name, null);
     return null;
   }
-  
+
   try {
     const queue = new Queue(name, {
       connection,
@@ -70,7 +72,10 @@ function getQueue(name: QueueName): Queue | null {
     // event that would crash the API/worker process. Degrade gracefully
     // instead: BullMQ retries the connection and jobs resume on recovery.
     queue.on('error', (err) => {
-      logger.warn({ err, queue: name }, 'Queue connection error; processing resumes when Redis recovers');
+      logger.warn(
+        { err, queue: name },
+        'Queue connection error; processing resumes when Redis recovers',
+      );
     });
     logger.info({ queue: name }, 'Queue created');
     return queue;
@@ -98,12 +103,14 @@ export const knowledgeRetryQueue = () => getQueue(QueueName.KNOWLEDGE_RETRY);
 export const memoryExtractionQueue = () => getQueue(QueueName.MEMORY_EXTRACTION);
 export const memoryEmbeddingQueue = () => getQueue(QueueName.MEMORY_EMBEDDING);
 export const memoryConversationSummaryQueue = () => getQueue(QueueName.MEMORY_CONVERSATION_SUMMARY);
+// Phase 6
+export const agentQueue = () => getQueue(QueueName.AGENT);
 
 export async function closeAllQueues(): Promise<void> {
   const allQueues = Array.from(queues.values()).filter((q): q is Queue => q !== null);
-  
+
   if (allQueues.length === 0) return;
-  
+
   await Promise.all(allQueues.map((q) => q.close()));
   queues.clear();
 }

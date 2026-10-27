@@ -1,11 +1,11 @@
 /**
  * Reranker — Abstract ranking interface for retrieved candidates.
- * 
+ *
  * The reranking abstraction allows different ranking strategies:
  * - Local scoring (similarity-based, recency-based)
  * - External rerankers (Cohere, Voyage, Jina)
  * - LLM-based reranking
- * 
+ *
  * Initial implementation uses a lightweight local scoring strategy.
  * External rerankers can be added later without changing the interface.
  */
@@ -19,7 +19,7 @@ export interface Reranker {
 
 /**
  * LocalReranker — Lightweight reranking using similarity scores and metadata.
- * 
+ *
  * Scoring strategy:
  * - Base score from vector similarity (0-1)
  * - Boost for heading matches

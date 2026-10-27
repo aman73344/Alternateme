@@ -16,13 +16,16 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // Ensure required test env vars exist (fall back to test values if not in .env)
 if (!process.env.JWT_ACCESS_SECRET) {
-  (process.env as Record<string, string>).JWT_ACCESS_SECRET = 'test-access-secret-minimum-32-chars!!';
+  (process.env as Record<string, string>).JWT_ACCESS_SECRET =
+    'test-access-secret-minimum-32-chars!!';
 }
 if (!process.env.JWT_REFRESH_SECRET) {
-  (process.env as Record<string, string>).JWT_REFRESH_SECRET = 'test-refresh-secret-minimum-32-chars!!';
+  (process.env as Record<string, string>).JWT_REFRESH_SECRET =
+    'test-refresh-secret-minimum-32-chars!!';
 }
 if (!process.env.ENCRYPTION_KEY) {
-  (process.env as Record<string, string>).ENCRYPTION_KEY = 'test-encryption-key-32-characters-minimum!!';
+  (process.env as Record<string, string>).ENCRYPTION_KEY =
+    'test-encryption-key-32-characters-minimum!!';
 }
 if (!process.env.REDIS_URL) {
   (process.env as Record<string, string>).REDIS_URL = 'redis://localhost:6379';

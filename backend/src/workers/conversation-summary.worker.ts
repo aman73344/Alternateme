@@ -35,7 +35,10 @@ export function createConversationSummaryWorker(): Worker {
       const data = job.data as SummaryJobData;
       const started = Date.now();
 
-      logger.info({ jobId: job.id, conversationId: data.conversationId }, 'Conversation summary job started');
+      logger.info(
+        { jobId: job.id, conversationId: data.conversationId },
+        'Conversation summary job started',
+      );
 
       try {
         // Load messages in range
@@ -52,9 +55,7 @@ export function createConversationSummaryWorker(): Worker {
           take: data.messageRangeEnd - data.messageRangeStart,
         });
 
-        const content = messages
-          .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
-          .join('\n\n');
+        const content = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
 
         // Resolve the alternate's configured provider (fallback: platform default)
         const providerConfig = await prisma.aIProviderConfig.findFirst({

@@ -1,11 +1,18 @@
 import { z } from 'zod';
 
 export const createAlternateSchema = z.object({
-  displayName: z.string().min(1, 'Display name is required').max(100, 'Display name must be less than 100 characters'),
-  username: z.string()
+  displayName: z
+    .string()
+    .min(1, 'Display name is required')
+    .max(100, 'Display name must be less than 100 characters'),
+  username: z
+    .string()
     .min(3, 'Username must be at least 3 characters')
     .max(30, 'Username must be less than 30 characters')
-    .regex(/^[a-z0-9_-]+$/, 'Username can only contain lowercase letters, numbers, hyphens, and underscores'),
+    .regex(
+      /^[a-z0-9_-]+$/,
+      'Username can only contain lowercase letters, numbers, hyphens, and underscores',
+    ),
   title: z.string().max(200, 'Title must be less than 200 characters').optional(),
   bio: z.string().max(1000, 'Bio must be less than 1000 characters').optional(),
   avatarUrl: z.string().url('Invalid avatar URL').optional(),
@@ -14,10 +21,14 @@ export const createAlternateSchema = z.object({
 
 export const updateAlternateSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
-  username: z.string()
+  username: z
+    .string()
     .min(3)
     .max(30)
-    .regex(/^[a-z0-9_-]+$/, 'Username can only contain lowercase letters, numbers, hyphens, and underscores')
+    .regex(
+      /^[a-z0-9_-]+$/,
+      'Username can only contain lowercase letters, numbers, hyphens, and underscores',
+    )
     .optional(),
   title: z.string().max(200).optional(),
   bio: z.string().max(1000).optional(),
@@ -32,10 +43,14 @@ export const alternateParamsSchema = z.object({
 });
 
 export const usernameAvailabilitySchema = z.object({
-  username: z.string()
+  username: z
+    .string()
     .min(3)
     .max(30)
-    .regex(/^[a-z0-9_-]+$/, 'Username can only contain lowercase letters, numbers, hyphens, and underscores'),
+    .regex(
+      /^[a-z0-9_-]+$/,
+      'Username can only contain lowercase letters, numbers, hyphens, and underscores',
+    ),
 });
 
 export type CreateAlternateInput = z.infer<typeof createAlternateSchema>;

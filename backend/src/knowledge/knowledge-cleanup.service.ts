@@ -41,10 +41,7 @@ export class KnowledgeCleanupService {
       sourceId,
     );
     const removedChunks = await prisma.documentChunk.deleteMany({ where: { sourceId } });
-    logger.info(
-      { sourceId, chunks: removedChunks.count, embeddings },
-      'Knowledge purged',
-    );
+    logger.info({ sourceId, chunks: removedChunks.count, embeddings }, 'Knowledge purged');
     return { chunks: removedChunks.count, embeddings };
   }
 

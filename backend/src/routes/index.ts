@@ -9,6 +9,8 @@ import { voiceRouter } from '@/voice/voice.routes';
 import { providerRouter } from '@/ai-providers/provider.routes';
 import { chatRouter } from '@/chat/chat.routes';
 import { memoryRouter } from '@/memory/memory.routes';
+import { agentRouter } from '@/agent/agent.routes';
+import { integrationRouter } from '@/integrations/integration.routes';
 
 const router: import('express').Router = Router();
 
@@ -25,5 +27,8 @@ router.use('/voice', voiceRouter);
 router.use('/ai-providers', providerRouter);
 router.use('/alternates', chatRouter);
 router.use('/alternates', memoryRouter);
+// Phase 6 — agent orchestration & tool execution (owner-only surface)
+router.use('/alternates', agentRouter);
+router.use('/integrations', integrationRouter);
 
 export { router as apiRouter };

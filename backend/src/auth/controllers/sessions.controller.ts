@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { apiResponse } from '@/utils/response';
-import { getActiveSessions, revokeSessionById, revokeAllUserSessions } from '@/auth/services/session.service';
+import {
+  getActiveSessions,
+  revokeSessionById,
+  revokeAllUserSessions,
+} from '@/auth/services/session.service';
 
 export class SessionsController {
   async getSessions(req: Request, res: Response, next: NextFunction): Promise<void> {

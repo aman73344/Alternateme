@@ -5,7 +5,11 @@ import { KnowledgeError } from './knowledge.errors';
 export class KnowledgeSourceRepository {
   async getSource(sourceId: string, userId?: string, alternateId?: string) {
     const source = await prisma.trainingSource.findFirst({
-      where: { id: sourceId, ...(userId ? { userId } : {}), ...(alternateId ? { alternateId } : {}) },
+      where: {
+        id: sourceId,
+        ...(userId ? { userId } : {}),
+        ...(alternateId ? { alternateId } : {}),
+      },
     });
     if (!source) throw new KnowledgeError('SOURCE_NOT_FOUND', { sourceId });
     return source;
@@ -14,7 +18,13 @@ export class KnowledgeSourceRepository {
   async markSourceProcessing(sourceId: string, stage: string): Promise<void> {
     await prisma.trainingSource.update({
       where: { id: sourceId },
-      data: { status: 'PROCESSING', processingStage: stage, errorCode: null, errorMessage: null, failedAt: null },
+      data: {
+        status: 'PROCESSING',
+        processingStage: stage,
+        errorCode: null,
+        errorMessage: null,
+        failedAt: null,
+      },
     });
   }
 
@@ -48,7 +58,13 @@ export class KnowledgeSourceRepository {
   ): Promise<void> {
     await prisma.trainingSource.update({
       where: { id: sourceId },
-      data: { status: 'FAILED', processingStage: stage ?? null, errorCode, errorMessage, failedAt: new Date() },
+      data: {
+        status: 'FAILED',
+        processingStage: stage ?? null,
+        errorCode,
+        errorMessage,
+        failedAt: new Date(),
+      },
     });
   }
 
@@ -59,7 +75,10 @@ export class KnowledgeSourceRepository {
     });
   }
 
-  async addSourceStorageInfo(sourceId: string, info: { storageKey: string; storageBucket: string; storageUrl: string }): Promise<void> {
+  async addSourceStorageInfo(
+    sourceId: string,
+    info: { storageKey: string; storageBucket: string; storageUrl: string },
+  ): Promise<void> {
     await prisma.trainingSource.update({
       where: { id: sourceId },
       data: info,
@@ -104,7 +123,11 @@ export class KnowledgeSourceRepository {
     });
   }
 
-  async markDocumentFailed(documentId: string, errorCode: string, errorMessage: string): Promise<void> {
+  async markDocumentFailed(
+    documentId: string,
+    errorCode: string,
+    errorMessage: string,
+  ): Promise<void> {
     await prisma.knowledgeDocument.update({
       where: { id: documentId },
       data: { status: 'FAILED', failedAt: new Date(), errorCode, errorMessage },

@@ -87,7 +87,9 @@ export class WebExtractor implements DocumentExtractor {
       const title =
         $('meta[property="og:title"]').attr('content') ||
         $('title').first().text().trim() ||
-        (source.name || source.url || 'Web Page');
+        source.name ||
+        source.url ||
+        'Web Page';
       const language = ($('html').attr('lang') || 'en').slice(0, 10);
 
       return {
